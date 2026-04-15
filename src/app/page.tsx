@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import type { CreateLinkyResponse } from "@/lib/linky/types";
@@ -67,7 +68,7 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/linkies", {
+      const response = await fetch("/api/links", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -115,7 +116,17 @@ export default function Home() {
     <div className="terminal-stage flex flex-1 items-start justify-center px-6 py-10 sm:py-12">
       <main className="terminal-shell w-full max-w-6xl p-6 sm:p-8 lg:p-10">
         <header className="mb-7">
-          <p className="terminal-label mb-3">CLI-FIRST LINK ORCHESTRATOR</p>
+          <div className="mb-3 flex items-center gap-3">
+            <Image
+              src="/logo-mark.svg"
+              alt="Linky logo mark"
+              width={28}
+              height={28}
+              className="border border-foreground bg-white"
+              priority
+            />
+            <p className="terminal-label">CLI-FIRST LINK ORCHESTRATOR</p>
+          </div>
           <h1 className="display-title mb-2 text-5xl leading-[0.9] font-semibold text-foreground sm:text-6xl">
             Linky
           </h1>

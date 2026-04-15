@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Linky Logo Options</title>
+    <style>
+      :root {
+        --bg: #f3f3f3;
+        --fg: #0a0a0a;
+        --card: #ffffff;
+        --border: #d4d4d4;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--fg);
+      }
+
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        margin: 0 0 20px;
+        opacity: 0.72;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        background: var(--card);
+        padding: 14px;
+      }
+
+      .label {
+        margin: 0 0 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .preview {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+
+      .sizes {
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        opacity: 0.72;
+      }
+
+      .chip img {
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Linky Logo Options</h1>
+      <p>Open this at <code>/logo-options.html</code> and choose the winner.</p>
+
+      <section class="grid">
+        <article class="card">
+          <h2 class="label">Option A - Slash</h2>
+          <img class="preview" src="/logo-option-slash.svg" alt="Option A Slash logo" width="512" height="512" />
+          <div class="sizes">
+            <div class="chip">
+              <img src="/logo-option-slash.svg" alt="" width="16" height="16" />
+              <span>16px</span>
+            </div>
+            <div class="chip">
+              <img src="/logo-option-slash.svg" alt="" width="32" height="32" />
+              <span>32px</span>
+            </div>
+            <div class="chip">
+              <img src="/logo-option-slash.svg" alt="" width="64" height="64" />
+              <span>64px</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="label">Option B - Double Slash</h2>
+          <img class="preview" src="/logo-option-double-slash.svg" alt="Option B Double Slash logo" width="512" height="512" />
+          <div class="sizes">
+            <div class="chip">
+              <img src="/logo-option-double-slash.svg" alt="" width="16" height="16" />
+              <span>16px</span>
+            </div>
+            <div class="chip">
+              <img src="/logo-option-double-slash.svg" alt="" width="32" height="32" />
+              <span>32px</span>
+            </div>
+            <div class="chip">
+              <img src="/logo-option-double-slash.svg" alt="" width="64" height="64" />
+              <span>64px</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2 class="label">Option C - Link</h2>
+          <img class="preview" src="/logo-option-link.svg" alt="Option C Link logo" width="512" height="512" />
+          <div class="sizes">
+            <div class="chip">
+              <img src="/logo-option-link.svg" alt="" width="16" height="16" />
+              <span>16px</span>
+            </div>
+            <div class="chip">
+              <img src="/logo-option-link.svg" alt="" width="32" height="32" />
+              <span>32px</span>
+            </div>
+            <div class="chip">
+              <img src="/logo-option-link.svg" alt="" width="64" height="64" />
+              <span>64px</span>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 ---
 name: linky
-description: Create Linky short launch URLs through the Linky API with curl or through the Linky CLI. Use when bundling multiple URLs into one short link, testing `POST /api/linkies`, or generating launch links for scripts and agents.
+description: Create Linky short launch URLs through the Linky API with curl or through the Linky CLI. Use when bundling multiple URLs into one short link, testing `POST /api/links`, or generating launch links for scripts and agents.
 ---
 
 # Linky
@@ -10,7 +10,7 @@ description: Create Linky short launch URLs through the Linky API with curl or t
 Use this skill when you need to create a Linky from a list of URLs.
 
 Supported creation paths in this repo:
-- `curl` against `POST /api/linkies`
+- `curl` against `POST /api/links`
 - the local CLI at `node cli/index.js`
 
 ## Inputs to gather
@@ -36,7 +36,7 @@ Production default:
 ## API contract
 
 Endpoint:
-- `POST /api/linkies`
+- `POST /api/links`
 
 JSON body shape:
 - `urls`: required non-empty array of URL strings
@@ -107,7 +107,7 @@ Minimal request:
 
 ```bash
 # Create a Linky directly via the production public HTTP API.
-curl -X POST "https://getalinky.com/api/linkies" \
+curl -X POST "https://getalinky.com/api/links" \
   -H "content-type: application/json" \
   --data-binary '{
     "urls": [
@@ -122,7 +122,7 @@ Request with metadata:
 
 ```bash
 # Attach structured metadata so downstream systems can understand why this Linky was created.
-curl -X POST "https://getalinky.com/api/linkies" \
+curl -X POST "https://getalinky.com/api/links" \
   -H "content-type: application/json" \
   --data-binary '{
     "urls": [
@@ -141,7 +141,7 @@ Capture just the created URL in a shell pipeline:
 
 ```bash
 # Parse the JSON response and print only the final short Linky URL.
-curl -sS -X POST "https://getalinky.com/api/linkies" \
+curl -sS -X POST "https://getalinky.com/api/links" \
   -H "content-type: application/json" \
   --data-binary '{
     "urls": [

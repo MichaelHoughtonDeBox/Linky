@@ -24,7 +24,7 @@ async function createLinky({
 }) {
   assertUrlArray(urls);
 
-  const endpoint = new URL("/api/linkies", baseUrl).toString();
+  const endpoint = new URL("/api/links", baseUrl).toString();
   const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: {

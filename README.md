@@ -1,11 +1,19 @@
+<p align="center">
+  <img src="./public/github-header-minimal.svg" alt="Linky header" width="100%" />
+</p>
+
 # Linky
 
 Linky turns many URLs into one short launch link.
 
+Hosted production URL: `https://getalinky.com`
+
 Use it from:
+- a Cursor skill (`skills/linky`)
 - the web app (`/`)
 - the CLI (`linky create ...`)
 - the npm package API (`createLinky(...)`)
+- direct HTTP (`POST /api/links`)
 
 The short URL resolves to `/l/[slug]`, where users click **Open All** to launch each tab.
 
@@ -20,10 +28,10 @@ The short URL resolves to `/l/[slug]`, where users click **Open All** to launch 
 ## Architecture
 
 ```text
-WebUI / CLI / SDK
+Skill / WebUI / CLI / SDK / curl
         |
         v
-POST /api/linkies  --->  Postgres (slug -> url bundle)
+POST /api/links  --->  Postgres (slug -> url bundle)
         |
         v
    /l/[slug] launcher page
@@ -65,7 +73,7 @@ App defaults to `http://localhost:4040`.
 
 ## API
 
-### `POST /api/linkies`
+### `POST /api/links`
 
 Create a new Linky and return a short URL.
 
@@ -83,7 +91,7 @@ Response:
 ```json
 {
   "slug": "x8q2m4k",
-  "url": "https://your-domain/l/x8q2m4k"
+  "url": "https://getalinky.com/l/x8q2m4k"
 }
 ```
 
@@ -91,7 +99,7 @@ Production `curl` example:
 
 ```bash
 # Create a Linky directly through the production public API.
-curl -X POST "https://getalinky.com/api/linkies" \
+curl -X POST "https://getalinky.com/api/links" \
   -H "content-type: application/json" \
   --data-binary '{
     "urls": [
@@ -110,6 +118,22 @@ Common errors:
 - `429`: rate limit exceeded
 - `500`: server/database issue
 
+## Skill Install (for model workflows)
+
+Install the Linky skill from this repository:
+
+```bash
+# Install the Linky skill from the GitHub repository.
+npx skills add https://github.com/MichaelHoughtonDeBox/linky --skill linky
+```
+
+Verify the skill is installed:
+
+```bash
+# List installed skills and confirm `linky` appears.
+npx skills list
+```
+
 ## CLI
 
 The package ships a `linky` command.
@@ -126,8 +150,8 @@ Options:
 Examples:
 
 ```bash
-linky create https://example.com https://example.org
-echo "https://example.com" | linky create --stdin --json
+linky create https://example.com https://example.org --base-url https://getalinky.com
+echo "https://example.com" | linky create --stdin --json --base-url https://getalinky.com
 ```
 
 ## Package API (for agents and scripts)
@@ -178,6 +202,20 @@ npm run check
 ## Contributing
 
 See `CONTRIBUTING.md`.
+
+## GitHub Stars
+
+If Linky is useful, star the repository to help more builders discover it.
+
+[![GitHub stars](https://img.shields.io/github/stars/MichaelHoughtonDeBox/linky?style=flat-square)](https://github.com/MichaelHoughtonDeBox/linky/stargazers)
+
+## Contributors
+
+Contributions of all sizes are welcome.
+
+[![GitHub contributors](https://img.shields.io/github/contributors/MichaelHoughtonDeBox/linky?style=flat-square)](https://github.com/MichaelHoughtonDeBox/linky/graphs/contributors)
+
+[![Contributors](https://contrib.rocks/image?repo=MichaelHoughtonDeBox/linky)](https://github.com/MichaelHoughtonDeBox/linky/graphs/contributors)
 
 ## License
 

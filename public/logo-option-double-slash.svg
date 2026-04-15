@@ -1,0 +1,6 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" fill="white" />
+  <!-- URL-native mark: double slash for dev/web notation. -->
+  <line x1="156" y1="396" x2="268" y2="116" stroke="black" stroke-width="52" stroke-linecap="square" />
+  <line x1="244" y1="396" x2="356" y2="116" stroke="black" stroke-width="52" stroke-linecap="square" />
+</svg>
