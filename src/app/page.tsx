@@ -244,17 +244,33 @@ export default function Home() {
               server-side.
             </p>
             <div className="terminal-command-grid mt-4">
-              <div className="terminal-card overflow-hidden p-3">
-                <p className="terminal-label mb-2">CLI PREVIEW</p>
-                <code className="block overflow-x-auto whitespace-pre-wrap break-all text-xs text-foreground sm:text-sm">
-                  {cliPreviewCommand}
-                </code>
+              {/* Render command previews in terminal-like shells for readability. */}
+              <div className="terminal-code-shell">
+                <div className="terminal-code-head">
+                  <div className="terminal-code-dots" aria-hidden="true">
+                    <span className="terminal-code-dot" />
+                    <span className="terminal-code-dot" />
+                    <span className="terminal-code-dot" />
+                  </div>
+                  <span className="terminal-code-label">CLI / bash</span>
+                </div>
+                <pre className="terminal-code-pre">
+                  <code>{cliPreviewCommand}</code>
+                </pre>
               </div>
-              <div className="terminal-card overflow-hidden p-3">
-                <p className="terminal-label mb-2">CURL PREVIEW</p>
-                <code className="block overflow-x-auto whitespace-pre-wrap break-all text-xs text-foreground sm:text-sm">
-                  {curlPreviewCommand}
-                </code>
+
+              <div className="terminal-code-shell">
+                <div className="terminal-code-head">
+                  <div className="terminal-code-dots" aria-hidden="true">
+                    <span className="terminal-code-dot" />
+                    <span className="terminal-code-dot" />
+                    <span className="terminal-code-dot" />
+                  </div>
+                  <span className="terminal-code-label">CURL / bash</span>
+                </div>
+                <pre className="terminal-code-pre">
+                  <code>{curlPreviewCommand}</code>
+                </pre>
               </div>
             </div>
 
