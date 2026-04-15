@@ -128,6 +128,10 @@ export default function Home() {
             <p className="terminal-label">CLI-FIRST LINK ORCHESTRATOR</p>
           </div>
           <h1 className="display-title mb-2 text-5xl leading-[0.9] font-semibold text-foreground sm:text-6xl">
+            {/* Prefix slash ties the hero lockup to the core logo mark. */}
+            <span aria-hidden="true" className="mr-2 inline-block">
+              /
+            </span>
             Linky
           </h1>
           <p className="terminal-muted max-w-3xl text-sm leading-relaxed sm:text-base">

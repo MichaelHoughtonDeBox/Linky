@@ -1,7 +1,7 @@
 const DEFAULT_BASE_URL =
   process.env.LINKY_BASE_URL ||
   process.env.LINKIE_URL ||
-  "https://linky.vercel.app";
+  "https://getalinky.com";
 
 function assertUrlArray(urls) {
   if (!Array.isArray(urls) || urls.length === 0) {

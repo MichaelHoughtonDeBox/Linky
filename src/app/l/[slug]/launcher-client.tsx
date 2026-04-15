@@ -55,6 +55,10 @@ export function LinkyLauncher({
         <header className="mb-7">
           <p className="terminal-label mb-3">LAUNCH DECK</p>
           <h1 className="display-title mb-2 text-4xl font-semibold text-foreground sm:text-5xl">
+            {/* Keep the launcher headline aligned with the slash-led brand mark. */}
+            <span aria-hidden="true" className="mr-2 inline-block">
+              /
+            </span>
             Linky
           </h1>
           <p className="terminal-muted text-sm sm:text-base">
