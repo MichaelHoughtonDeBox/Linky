@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import type { CreateLinkyResponse } from "@/lib/linky/types";
 
@@ -146,6 +147,8 @@ export function LiveLinkyDemo() {
       setCreatedLinky({
         slug: data.slug,
         url: data.url,
+        claimUrl: data.claimUrl,
+        claimExpiresAt: data.claimExpiresAt,
       });
     } catch {
       setErrorMessage("Could not reach the Linky API. Please try again.");
@@ -290,6 +293,56 @@ export function LiveLinkyDemo() {
                   Open Linky
                 </a>
               </div>
+
+              {/*
+                Two post-create flows depending on auth state:
+                  - Signed-in users have `claimUrl` = undefined (ownership is
+                    already attributed server-side). We offer a dashboard
+                    shortcut so they can rename / edit immediately.
+                  - Signed-out users get `claimUrl` back from the API, which
+                    lets them bind this Linky to a future account without
+                    losing it. Saved Linkies have history, analytics (later),
+                    and can be edited anytime.
+              */}
+              {createdLinky.claimUrl ? (
+                <div className="mt-4 border-t border-[var(--panel-border)] pt-3">
+                  <p className="terminal-label mb-2">Keep this Linky for later</p>
+                  <p className="terminal-muted mb-2 text-xs sm:text-sm">
+                    Sign in or create an account to claim ownership. You&apos;ll
+                    be able to edit the URL bundle, rename it, and share it
+                    from your dashboard.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={createdLinky.claimUrl.replace(
+                        /^https?:\/\/[^/]+/,
+                        "",
+                      )}
+                      className="terminal-secondary px-4 py-2 text-sm"
+                    >
+                      Claim this Linky →
+                    </Link>
+                    <CopyButton
+                      text={createdLinky.claimUrl}
+                      label="Copy claim URL"
+                      className="terminal-secondary px-4 py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 border-t border-[var(--panel-border)] pt-3">
+                  <p className="terminal-muted mb-2 text-xs sm:text-sm">
+                    Saved to your account — open your dashboard to rename, edit,
+                    or delete.
+                  </p>
+                  <Link
+                    href={`/dashboard/linkies/${createdLinky.slug}`}
+                    className="terminal-secondary px-4 py-2 text-sm"
+                  >
+                    Open in dashboard →
+                  </Link>
+                </div>
+              )}
             </section>
           ) : null}
         </section>

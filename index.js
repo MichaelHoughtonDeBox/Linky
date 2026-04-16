@@ -20,6 +20,10 @@ async function createLinky({
   baseUrl = DEFAULT_BASE_URL,
   source = "sdk",
   metadata,
+  email,
+  title,
+  description,
+  urlMetadata,
   fetchImpl = fetch,
 }) {
   assertUrlArray(urls);
@@ -35,6 +39,10 @@ async function createLinky({
       urls,
       source,
       metadata,
+      email,
+      title,
+      description,
+      urlMetadata,
     }),
   });
 
@@ -54,9 +62,15 @@ async function createLinky({
     throw new Error("Linky API returned an invalid response payload.");
   }
 
+  // `claimUrl` + `claimExpiresAt` are only returned for anonymous creates.
+  // Callers that are signed-in (via a reverse-proxied session cookie) will
+  // not receive them and should ignore the absence.
   return {
     slug: data.slug,
     url: data.url,
+    claimUrl: typeof data.claimUrl === "string" ? data.claimUrl : undefined,
+    claimExpiresAt:
+      typeof data.claimExpiresAt === "string" ? data.claimExpiresAt : undefined,
   };
 }
 

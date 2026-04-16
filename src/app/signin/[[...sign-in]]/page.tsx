@@ -25,7 +25,10 @@ export default function SignInPage() {
               routing="path"
               path="/signin"
               signUpUrl="/signup"
-              forceRedirectUrl="/dashboard"
+              // `fallbackRedirectUrl` honors upstream `redirect_url` query
+              // params (used by the claim flow) and falls back to the
+              // dashboard for direct sign-ins.
+              fallbackRedirectUrl="/dashboard"
             />
           </div>
         </section>

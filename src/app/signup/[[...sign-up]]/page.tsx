@@ -28,9 +28,11 @@ export default function SignUpPage() {
               routing="path"
               path="/signup"
               signInUrl="/signin"
-              // Send freshly signed-up users to the dashboard so they land on
-              // something useful (their Linkies list).
-              forceRedirectUrl="/dashboard"
+              // `fallbackRedirectUrl` is used when no `redirect_url` query
+              // param is present. This lets upstream flows (like the claim
+              // page) round-trip through sign-up while still defaulting to
+              // the dashboard for direct visits.
+              fallbackRedirectUrl="/dashboard"
             />
           </div>
         </section>

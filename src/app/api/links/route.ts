@@ -9,6 +9,7 @@ import type {
   LinkyRecord,
 } from "@/lib/linky/types";
 import { getAuthSubject, type AuthSubject } from "@/lib/server/auth";
+import { createClaimToken } from "@/lib/server/claim-tokens";
 import { getPublicBaseUrl, getRateLimitConfig } from "@/lib/server/config";
 import { getLimits } from "@/lib/server/entitlements";
 import { computeCreatorFingerprint } from "@/lib/server/fingerprint";
@@ -40,14 +41,22 @@ function toErrorResponse(error: LinkyError): Response {
 function buildCreateResponse(
   record: LinkyRecord,
   request: NextRequest,
+  claim?: { token: string; expiresAt: string },
 ): CreateLinkyResponse {
   const baseUrl = getPublicBaseUrl(request.nextUrl.origin);
   const url = new URL(`/l/${record.slug}`, baseUrl).toString();
 
-  return {
+  const response: CreateLinkyResponse = {
     slug: record.slug,
     url,
   };
+
+  if (claim) {
+    response.claimUrl = new URL(`/claim/${claim.token}`, baseUrl).toString();
+    response.claimExpiresAt = claim.expiresAt;
+  }
+
+  return response;
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +180,27 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
 
     const record = await createLinkyRecord(payload, attribution);
-    const response = buildCreateResponse(record, request);
+
+    // Mint a claim token iff the Linky ended up anonymous. Signed-in
+    // callers already have ownership attributed; minting a token for them
+    // would be noise. Anonymous callers ALWAYS get a claim URL back so
+    // they have a frictionless path to bind the Linky to an account later,
+    // even if they didn't pass an email.
+    const claim =
+      subject.type === "anonymous"
+        ? await createClaimToken({
+            linkyId: record.id,
+            email: payload.email ?? null,
+          })
+        : null;
+
+    const response = buildCreateResponse(
+      record,
+      request,
+      claim
+        ? { token: claim.token, expiresAt: claim.expiresAt }
+        : undefined,
+    );
 
     return Response.json(response, { status: 201 });
   } catch (error) {

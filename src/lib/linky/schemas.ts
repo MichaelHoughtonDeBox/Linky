@@ -243,6 +243,7 @@ export function parseCreateLinkyPayload(payload: unknown): CreateLinkyPayload {
     MAX_DESCRIPTION_LENGTH,
   );
   const urlMetadata = normalizeUrlMetadataArray(payload.urlMetadata, urls.length);
+  const email = normalizeEmail(payload.email);
 
   return {
     urls,
@@ -251,7 +252,49 @@ export function parseCreateLinkyPayload(payload: unknown): CreateLinkyPayload {
     title: title ?? undefined,
     description: description ?? undefined,
     urlMetadata,
+    email,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Email.
+// Used only for the claim flow — validation here is intentionally permissive
+// (must contain an @ and a dot, length-capped). Clerk re-validates on sign-up.
+// ---------------------------------------------------------------------------
+
+const MAX_EMAIL_LENGTH = 254; // RFC 5321 practical limit.
+
+function normalizeEmail(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+
+  if (typeof value !== "string") {
+    throw new LinkyError("`email` must be a string when provided.", {
+      code: "BAD_REQUEST",
+      statusCode: 400,
+    });
+  }
+
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return undefined;
+
+  if (trimmed.length > MAX_EMAIL_LENGTH) {
+    throw new LinkyError(
+      `\`email\` must be ${MAX_EMAIL_LENGTH} characters or fewer.`,
+      { code: "BAD_REQUEST", statusCode: 400 },
+    );
+  }
+
+  // Loose shape check — we are NOT validating deliverability, just catching
+  // obvious garbage. Real validation happens when Clerk sends the verify
+  // email at sign-up time.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    throw new LinkyError("`email` does not look like a valid address.", {
+      code: "BAD_REQUEST",
+      statusCode: 400,
+    });
+  }
+
+  return trimmed;
 }
 
 // ---------------------------------------------------------------------------

@@ -31,11 +31,22 @@ export type CreateLinkyPayload = {
   title?: string;
   description?: string;
   urlMetadata?: UrlMetadata[];
+  // Optional: when provided on an anonymous create, we mint a claim token
+  // tied to this email so the recipient can bind the Linky to their account
+  // by clicking the returned claim URL (and, in a future iteration, we may
+  // email it directly). Presence alone does NOT authenticate the request;
+  // the Linky stays anonymous until the token is consumed via sign-in.
+  email?: string;
 };
 
 export type CreateLinkyResponse = {
   slug: string;
   url: string;
+  // Present when the Linky was created anonymously. Clicking this URL
+  // prompts the visitor to sign in, then transfers ownership to their
+  // Clerk user / active org.
+  claimUrl?: string;
+  claimExpiresAt?: string;
 };
 
 export type LinkyOwner =
