@@ -162,9 +162,27 @@ Request:
     { "note": "PR under review", "tags": ["eng"] },
     { "note": "Preview deploy", "openPolicy": "desktop" }
   ],
-  "email": "alice@example.com"
+  "email": "alice@example.com",
+  "resolutionPolicy": {
+    "version": 1,
+    "rules": [
+      {
+        "name": "Engineering team",
+        "when": { "op": "endsWith", "field": "emailDomain", "value": "acme.com" },
+        "tabs": [{ "url": "https://linear.app/acme/my-issues" }]
+      }
+    ]
+  }
 }
 ```
+
+`resolutionPolicy` is optional (Sprint 2.5). When present, the Linky is
+born personalized — signed-in viewers whose identity matches a rule see
+that rule's tabs at `/l/<slug>`, while anonymous and unmatched viewers
+fall through to the `urls` above. Validated through the same parser as
+`PATCH /api/links/:slug`; malformed policies reject the whole create
+with `400`. Agents that want to lock down a Linky from the very first
+click should always pass this field.
 
 Response (anonymous create — signed-in callers omit the `claim*` + `warning` fields):
 
@@ -294,6 +312,8 @@ Options:
 - `--email <address>` flag this Linky to be claimed by the given email after the recipient signs in
 - `--title <string>` optional title stored with the Linky
 - `--description <string>` optional description stored with the Linky
+- `--policy <file>` attach an identity-aware resolution policy from a JSON file at create time (use `-` to read from stdin)
+- `--client <id>` client attribution sent as `Linky-Client: <tool>/<version>`
 - `--json` machine-readable output
 
 Examples:
@@ -301,6 +321,7 @@ Examples:
 ```bash
 linky create https://example.com https://example.org
 linky create https://example.com --email alice@example.com --title "Standup bundle"
+linky create https://acme.com/docs --policy ./acme-team.policy.json
 echo "https://example.com" | linky create --stdin --json
 ```
 
@@ -324,10 +345,21 @@ const result = await createLinky({
     { note: "PR", tags: ["eng"] },
     { note: "Preview", openPolicy: "desktop" },
   ],
+  resolutionPolicy: {               // optional; Sprint 2.5 "born personalized"
+    version: 1,
+    rules: [
+      {
+        name: "Engineering team",
+        when: { op: "endsWith", field: "emailDomain", value: "acme.com" },
+        tabs: [{ url: "https://linear.app/acme/my-issues" }],
+      },
+    ],
+  },
 });
 
-console.log(result.url);       // always present
-console.log(result.claimUrl);  // present only for anonymous creates
+console.log(result.url);                // always present
+console.log(result.claimUrl);           // present only for anonymous creates
+console.log(result.resolutionPolicy);   // present only when a policy was attached
 ```
 
 ## Claim Flow (agent → human handoff)
@@ -444,9 +476,65 @@ panel with two modes:
 - **Advanced (JSON)** — raw policy with validation on Apply. Use this
   for compound `and` / `or` / `not` conditions.
 
-PATCH directly via the API (or SDK, when it lands in Sprint 2.5) is also
-fine — the `parseResolutionPolicy` validator is the single source of
-truth and produces the same errors everywhere.
+### Attach at create time (Sprint 2.5) — agent-first path
+
+Agents creating personalized Linkies should attach the policy in the
+same `POST /api/links` call. This locks the Linky down from the first
+click — no window where an unrestricted version is live.
+
+CLI:
+
+```bash
+# Write the policy JSON to a file, then attach with --policy.
+cat > /tmp/acme-team.policy.json <<'JSON'
+{
+  "version": 1,
+  "rules": [
+    {
+      "name": "Engineering team",
+      "when": { "op": "endsWith", "field": "emailDomain", "value": "acme.com" },
+      "tabs": [{ "url": "https://linear.app/acme/my-issues" }]
+    }
+  ]
+}
+JSON
+
+linky create https://acme.com/docs https://acme.com/status \
+  --policy /tmp/acme-team.policy.json \
+  --title "Acme standup"
+```
+
+SDK:
+
+```js
+const { createLinky } = require("@linky/linky");
+
+await createLinky({
+  urls: ["https://acme.com/docs", "https://acme.com/status"],
+  source: "agent",
+  title: "Acme standup",
+  resolutionPolicy: {
+    version: 1,
+    rules: [
+      {
+        name: "Engineering team",
+        when: { op: "endsWith", field: "emailDomain", value: "acme.com" },
+        tabs: [{ url: "https://linear.app/acme/my-issues" }],
+      },
+    ],
+  },
+});
+```
+
+The response echoes the parsed policy with server-minted rule ids, so
+you can log the canonical form without a second fetch.
+
+**Caveat — anonymous Linkies are immutable.** An anonymous create
+(no Clerk session) with a policy attached locks the policy along with
+the Linky. The recipient must claim the Linky via the returned
+`claimUrl` before any edit (including policy edits) is possible.
+Pass `email` alongside `resolutionPolicy` so the claim URL lands with
+the eventual human owner.
 
 ## Deployment
 
@@ -517,7 +605,8 @@ several of these are different by design.
 
 - [x] **Accounts + editable launch bundles + per-URL metadata** — Sprint 1.
 - [x] **Identity-aware URL resolution** — same Linky, different tabs per viewer. Sprint 2.
-- [ ] **CLI / SDK flags for policy editing** (`linky update <slug> --policy file.json`) — Sprint 2.5.
+- [x] **Policy at create time via CLI / SDK / API** (`--policy` flag, `createLinky({ resolutionPolicy })`, `POST /api/links` accepts `resolutionPolicy`) — Sprint 2.5.
+- [ ] **`linky update <slug>` CLI command** — post-create policy editing from the terminal. Sprint 2.6.
 - [ ] **Analytics + access control** — team plan foundation.
 - [ ] **First-class MCP server + "linky session" convention** — other frameworks can adopt; publish the spec.
 - [ ] **Cursor / Claude / ChatGPT-native skills** — emit a Linky at the end of every task.

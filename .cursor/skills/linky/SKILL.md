@@ -42,19 +42,26 @@ JSON body shape:
 - `urls`: required non-empty array of URL strings
 - `source`: optional string, normalized to one of the allowed values
 - `metadata`: optional JSON object
+- `title`, `description`: optional strings (length capped server-side)
+- `urlMetadata`: optional positional array aligned with `urls`
+- `email`: optional; on anonymous creates, flags the returned claim token for this address
+- `resolutionPolicy`: optional identity-aware resolution policy — see "Personalize at create time" below
 
 Success response:
 - `201`
 - JSON object with `slug` and `url`
+- On anonymous creates: also `claimUrl`, `claimToken`, `claimExpiresAt`, `warning`
+- When `resolutionPolicy` was attached: echoed back with server-minted rule ids
 
 Common failure modes:
-- `400` for invalid JSON or invalid payload
+- `400` for invalid JSON or invalid payload (including malformed `resolutionPolicy`)
 - `429` for rate limiting
 - `500` for server or database issues
 
 Important constraints:
 - Do not send `alias`. Custom aliases are currently rejected.
 - `metadata` must be a JSON object when provided.
+- `resolutionPolicy` goes through the same server-side validator used by `PATCH /api/links/:slug`. A malformed policy fails the entire create with `400` — no partial write.
 
 ## Preferred workflow
 
@@ -151,6 +158,114 @@ curl -sS -X POST "https://getalinky.com/api/links" \
     "source": "agent"
   }' | node -e 'process.stdin.once("data", (buf) => console.log(JSON.parse(buf).url))'
 ```
+
+## Personalize at create time (Sprint 2.5)
+
+When you want the Linky to serve different tabs to different viewers from
+the very first click, attach a `resolutionPolicy`. Signed-in viewers see
+tabs that match the rules; anonymous or unmatched viewers see the public
+`urls` as the fallback.
+
+### When to attach a policy
+
+- You are emitting a Linky that must not be fully public (e.g. customer-specific dashboards, internal agent runbooks).
+- You want a shared bundle to personalize per teammate without minting one URL per person.
+- The recipient will be signed in to Linky (or can be nudged to sign in — the launcher page already does this).
+
+When **not** to attach a policy:
+
+- Every viewer should see the same tabs. The public fallback is simpler.
+- The Linky will be claimed by a human who prefers to author their own rules in the dashboard.
+
+### Caveat — anonymous Linkies are immutable
+
+If you create a Linky anonymously (no Clerk session) with a policy, the
+policy is locked along with the Linky. Anonymous Linkies cannot be edited;
+this preserves the Sprint 1 trust model. The recipient must claim the
+Linky (via the returned `claimUrl`) to become the owner; only then can
+they edit the policy.
+
+Agents that need ongoing policy editing should either:
+1. Create under an authenticated Clerk session, or
+2. Pass `email` alongside `resolutionPolicy` so the claim URL lands with the eventual human owner.
+
+### Minimum-viable policy shape
+
+```json
+{
+  "version": 1,
+  "rules": [
+    {
+      "name": "Engineering team",
+      "when": { "op": "endsWith", "field": "emailDomain", "value": "acme.com" },
+      "tabs": [{ "url": "https://linear.app/acme/my-issues" }]
+    }
+  ]
+}
+```
+
+Operators: `always`, `anonymous`, `signedIn`, `equals`, `in`, `endsWith`, `exists`, `and`, `or`, `not`. Viewer fields: `email`, `emailDomain`, `userId`, `githubLogin`, `googleEmail` (singular) and `orgIds`, `orgSlugs` (set-valued, used with `in`). Full reference lives in the main README's "Identity-aware resolution" section.
+
+### curl — create + attach in one shot
+
+```bash
+# Write the policy to a file first so the JSON heredoc below stays readable.
+cat > /tmp/acme-team.policy.json <<'JSON'
+{
+  "version": 1,
+  "rules": [
+    {
+      "name": "Engineering team",
+      "when": { "op": "endsWith", "field": "emailDomain", "value": "acme.com" },
+      "tabs": [
+        { "url": "https://linear.app/acme/my-issues", "note": "Your queue" }
+      ]
+    }
+  ]
+}
+JSON
+
+# POST the policy alongside the URLs. The server validates, mints rule ids,
+# and echoes the parsed policy back so you can log the canonical form.
+curl -sS -X POST "https://getalinky.com/api/links" \
+  -H "content-type: application/json" \
+  --data-binary @- <<JSON
+{
+  "urls": ["https://acme.com/docs", "https://acme.com/status"],
+  "source": "agent",
+  "title": "Acme standup",
+  "resolutionPolicy": $(cat /tmp/acme-team.policy.json)
+}
+JSON
+```
+
+### CLI — create + attach in one shot
+
+```bash
+# Point the CLI at the policy file; everything else is identical to a
+# normal create call.
+node cli/index.js create \
+  "https://acme.com/docs" \
+  "https://acme.com/status" \
+  --policy /tmp/acme-team.policy.json \
+  --base-url "http://localhost:4040" \
+  --title "Acme standup"
+```
+
+Use `--policy -` to read the policy JSON from stdin instead of a file (handy when scripting). The CLI refuses `--policy -` together with `--stdin` — only one stdin consumer.
+
+The CLI prints a `Personalized: N rules attached` line in TTY mode; `--json` includes the full `resolutionPolicy` object on the result.
+
+### Validation errors
+
+Malformed policies surface a clear `400` response:
+
+- `Operator equals cannot be used with set-valued field orgSlugs. Use in with a single-element value array instead.`
+- `Condition at resolutionPolicy.rules[0].when nests deeper than 4 levels.`
+- `resolutionPolicy.rules may contain at most 50 rules.`
+- `URL at index 0 must use http:// or https:// protocol.` (applies to every rule's tab URLs, not just the public list)
+
+Read them back verbatim — the server's error message is the single source of truth for the DSL.
 
 ## Decision guide
 
