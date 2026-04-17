@@ -15,9 +15,9 @@ export default function DocsLimitsPage() {
         Limits & rate limits
       </h1>
       <p className="docs-lede">
-        Hard caps that gate agent abuse. Everything here is sourced from the
-        code — change a value in the repo and this page reflects it on next
-        build.
+        Hard caps that gate agent abuse. Numbers on this page are pulled from
+        Linky itself at build time, so they always match what the API will
+        actually accept.
       </p>
 
       <section className="docs-section">
@@ -28,39 +28,30 @@ export default function DocsLimitsPage() {
               <tr>
                 <th>Limit</th>
                 <th>Value</th>
-                <th>Source</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>URLs per Linky</td>
                 <td>{MAX_URLS_PER_LINKY}</td>
-                <td>
-                  <code>MAX_URLS_PER_LINKY</code> in{" "}
-                  <code>src/lib/linky/urls.ts</code>
-                </td>
               </tr>
               <tr>
                 <td>Max URL length</td>
                 <td>2048 characters</td>
-                <td>
-                  <code>MAX_URL_LENGTH</code> in{" "}
-                  <code>src/lib/linky/urls.ts</code>
-                </td>
               </tr>
               <tr>
                 <td>Supported protocols</td>
                 <td>
                   <code>http:</code>, <code>https:</code>
                 </td>
-                <td>
-                  <code>SUPPORTED_PROTOCOLS</code> in{" "}
-                  <code>src/lib/linky/urls.ts</code>
-                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <p>
+          URLs outside these bounds are rejected with{" "}
+          <code>400 INVALID_URLS</code>.
+        </p>
       </section>
 
       <section className="docs-section">
@@ -71,51 +62,50 @@ export default function DocsLimitsPage() {
               <tr>
                 <th>Limit</th>
                 <th>Value</th>
-                <th>Enforced at</th>
+                <th>When it bites</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Rules per policy</td>
                 <td>{MAX_RULES_PER_POLICY}</td>
-                <td>Parse time (both <code>POST</code> and <code>PATCH</code>).</td>
+                <td>Checked on every <code>POST</code> and <code>PATCH</code>.</td>
               </tr>
               <tr>
                 <td>Tabs per rule</td>
                 <td>{MAX_TABS_PER_RULE}</td>
-                <td>Parse time.</td>
+                <td>Checked on create / edit.</td>
               </tr>
               <tr>
                 <td>Condition nesting depth</td>
                 <td>{MAX_CONDITION_DEPTH}</td>
                 <td>
-                  Parse time — compound <code>and</code> / <code>or</code> /{" "}
-                  <code>not</code> bodies can&apos;t nest deeper.
+                  Compound <code>and</code> / <code>or</code> /{" "}
+                  <code>not</code> bodies can&apos;t nest deeper. Checked on
+                  create / edit.
                 </td>
               </tr>
               <tr>
                 <td>Condition string value length</td>
                 <td>512 characters</td>
-                <td>Parse time, per value in an <code>in</code> list or a scalar op.</td>
+                <td>Per value in an <code>in</code> list or a scalar op. Checked on create / edit.</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p>
-          All policy caps live in <code>src/lib/linky/policy.ts</code> as
-          exported constants. See{" "}
-          <Link href="/docs/personalize">Personalize</Link> for how they
-          interact with the DSL.
+          Exceed any of these and the API returns <code>400 BAD_REQUEST</code>.
+          See <Link href="/docs/personalize">Personalize</Link> for how the
+          caps interact with the DSL.
         </p>
       </section>
 
       <section className="docs-section">
         <p className="terminal-label">Plan defaults</p>
         <p>
-          From <code>getLimits</code> in{" "}
-          <code>src/lib/server/entitlements.ts</code>. Stripe-backed plans
-          will override these via the <code>entitlements</code> table; with
-          no row present the defaults below apply.
+          These are the defaults when no paid plan is attached to your
+          account. Paid plans override them once Stripe billing is attached;
+          until then every account uses the values below.
         </p>
         <div className="docs-table-wrap">
           <table className="docs-table">
@@ -152,9 +142,8 @@ export default function DocsLimitsPage() {
       <section className="docs-section">
         <p className="terminal-label">Anonymous create rate limit</p>
         <p>
-          From <code>getRateLimitConfig</code> in{" "}
-          <code>src/lib/server/config.ts</code>. Applies only to
-          unauthenticated <code>POST /api/links</code>, keyed by client IP.
+          Applies only to unauthenticated <code>POST /api/links</code>, keyed
+          by client IP. Signed-in callers are exempt.
         </p>
         <div className="docs-table-wrap">
           <table className="docs-table">
@@ -162,7 +151,7 @@ export default function DocsLimitsPage() {
               <tr>
                 <th>Setting</th>
                 <th>Default</th>
-                <th>Override</th>
+                <th>Self-host override</th>
               </tr>
             </thead>
             <tbody>
@@ -184,8 +173,9 @@ export default function DocsLimitsPage() {
           </table>
         </div>
         <p>
-          Exceeding the limit returns <code>429 RATE_LIMITED</code>. Agents
-          should back off — a retry-after strategy is recommended.
+          Exceeding the limit returns <code>429 RATE_LIMITED</code>. Back off
+          and retry — a retry-after strategy is recommended for agents
+          running in a loop.
         </p>
       </section>
 

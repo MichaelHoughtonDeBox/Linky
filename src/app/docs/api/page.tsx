@@ -134,8 +134,9 @@ export default function DocsApiPage() {
         <p className="terminal-label">PATCH /api/links/:slug (owner-only)</p>
         <p>
           Edit a Linky. All fields optional; at least one required. Every
-          edit snapshots the prior state into <code>linky_versions</code>{" "}
-          (including policy edits) so history is never lost.
+          edit — including policy edits — is saved as a new version, so
+          previous states are always recoverable via{" "}
+          <code>GET /api/links/:slug/versions</code>.
         </p>
         <pre className="docs-json">
           <code>{PATCH_LINKS_REQ}</code>
@@ -150,9 +151,9 @@ export default function DocsApiPage() {
       <section className="docs-section">
         <p className="terminal-label">DELETE /api/links/:slug (owner-only)</p>
         <p>
-          Soft-deletes the Linky. The public <code>/l/:slug</code> resolver
-          returns 404 afterwards; the row survives for audit and version
-          history.
+          Soft-deletes the Linky. The public <code>/l/:slug</code> launcher
+          returns 404 afterwards; the version history stays intact so you
+          can audit what the bundle pointed at.
         </p>
       </section>
 
@@ -171,8 +172,8 @@ export default function DocsApiPage() {
       <section className="docs-section">
         <p className="terminal-label">GET /api/links/:slug/versions (owner-only)</p>
         <p>
-          Append-only edit history. Returns every prior snapshot for the
-          Linky, newest first.
+          Every edit is kept forever as a new version. This endpoint returns
+          every prior snapshot for the Linky, newest first.
         </p>
         <pre className="docs-json">
           <code>{VERSIONS_RES}</code>
@@ -188,7 +189,7 @@ export default function DocsApiPage() {
           </li>
           <li>
             <code>POST /api/webhooks/stripe</code> — signature-verified.
-            Scaffolded for billing; logged only in the current sprint.
+            Wired up for billing; events are accepted and logged today.
           </li>
         </ul>
         <p>

@@ -18,8 +18,8 @@ export default function DocsClaimPage() {
         <ul>
           <li>
             Agent calls <code>POST /api/links</code> (or CLI / SDK) without a
-            Clerk session. The backend creates the Linky anonymously and
-            mints a <code>claim_tokens</code> row with a 30-day expiry.
+            Clerk session. Linky creates the bundle anonymously and mints a
+            claim token that expires in 30 days.
           </li>
           <li>
             Response returns <code>claimToken</code>, <code>claimUrl</code>,{" "}

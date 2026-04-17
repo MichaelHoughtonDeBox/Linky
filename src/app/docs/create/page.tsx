@@ -176,11 +176,12 @@ export default function DocsCreatePage() {
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">Create with a policy (Sprint 2.5)</p>
+        <p className="terminal-label">Create with a policy</p>
         <p>
-          Agents that want a Linky personalized from click one should attach
-          the policy in the same request. The Linky is born personalized — no
-          window where an unrestricted version is live.
+          Want the Linky personalized from the first click? Attach the
+          policy in the create request. There&apos;s no window where an
+          unrestricted version of the Linky exists — it&apos;s born with
+          the rules in place.
         </p>
         <CommandBlock
           title="POST /api/links with resolutionPolicy"

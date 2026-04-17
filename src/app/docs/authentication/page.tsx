@@ -86,10 +86,9 @@ export default function DocsAuthenticationPage() {
           </table>
         </div>
         <p>
-          The mapping lives in <code>src/lib/server/viewer-context.ts</code>.
-          It&apos;s pure and unit-tested with fake shapes — if Clerk renames a
-          provider (e.g. <code>oauth_github</code> → something else) the tests
-          turn red before the change reaches production.
+          If Clerk ever renames a provider key (for example{" "}
+          <code>oauth_github</code>), Linky catches the change before it ships
+          so your rules keep matching against the right field.
         </p>
       </section>
 
@@ -121,9 +120,9 @@ export default function DocsAuthenticationPage() {
           <code>email</code> or <code>emailDomain</code>.
         </p>
         <p>
-          Full deployment walkthrough (webhooks, signing secrets, DNS) lives
-          in the <code>README.md</code> &mdash; this page is the
-          viewer-identity-only view.
+          This page covers only how viewer identity flows into rule
+          evaluation. Clerk webhooks, signing secrets, and DNS setup are
+          operator concerns handled during deployment, not here.
         </p>
       </section>
 

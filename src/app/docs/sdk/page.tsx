@@ -83,11 +83,10 @@ export default function DocsSdkPage() {
           <code>{SDK_TYPES}</code>
         </pre>
         <p>
-          The DSL types (<code>ResolutionPolicy</code>,{" "}
-          <code>PolicyRule</code>, <code>PolicyCondition</code>,{" "}
-          <code>PolicyViewerField</code>) ship structurally in{" "}
-          <code>index.d.ts</code> so callers get full IntelliSense without a
-          runtime dependency on the repo&apos;s internal types module.
+          DSL types (<code>ResolutionPolicy</code>, <code>PolicyRule</code>,{" "}
+          <code>PolicyCondition</code>, <code>PolicyViewerField</code>) ship
+          with the package, so your editor gets full autocomplete on policy
+          objects with no extra install.
         </p>
       </section>
 
@@ -116,8 +115,8 @@ export default function DocsSdkPage() {
                 </td>
                 <td>string</td>
                 <td>
-                  Defaults to <code>DEFAULT_BASE_URL</code> from the SDK (set
-                  via env or <code>https://getalinky.com</code>).
+                  Defaults to <code>$LINKY_BASE_URL</code> if set, otherwise
+                  <code>https://getalinky.com</code>.
                 </td>
               </tr>
               <tr>

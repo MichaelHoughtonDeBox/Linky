@@ -6,12 +6,12 @@ const POLICY_SHAPE = `type ResolutionPolicy = {
 };
 
 type Rule = {
-  id: string;                  // ULID-style, minted server-side if absent
-  name?: string;               // owner-facing label; leaks only if showBadge
-  when: Condition;             // predicate over the viewer
+  id: string;                  // minted for you if you omit it
+  name?: string;               // your private label; viewer sees it only if showBadge
+  when: Condition;             // what has to be true for this rule to match
   tabs: { url: string; note?: string }[];
-  stopOnMatch: boolean;        // default: true (first-match-wins)
-  showBadge: boolean;          // default: false (keep owner taxonomy private)
+  stopOnMatch: boolean;        // default: true — first match wins and evaluation stops
+  showBadge: boolean;          // default: false — rule name stays private
 };`;
 
 const OP_EXAMPLES: { op: string; example: string; note: string }[] = [
@@ -33,25 +33,25 @@ const OP_EXAMPLES: { op: string; example: string; note: string }[] = [
   {
     op: "equals",
     example: '{ "op": "equals", "field": "email", "value": "alice@acme.com" }',
-    note: "Exact-match on a singular field.",
+    note: "Exact-match on a single-value field.",
   },
   {
     op: "in",
     example:
       '{ "op": "in", "field": "orgSlugs", "value": ["acme", "acme-staging"] }',
     note:
-      "Membership-set against a set-valued field, or value-in-list against a singular field.",
+      "Matches if the viewer's org membership list overlaps the value list, or — on a single-value field — if the viewer's value is in the list.",
   },
   {
     op: "endsWith",
     example:
       '{ "op": "endsWith", "field": "emailDomain", "value": "acme.com" }',
-    note: "Suffix match on a singular field.",
+    note: "Suffix match on a single-value field.",
   },
   {
     op: "exists",
     example: '{ "op": "exists", "field": "githubLogin" }',
-    note: "Matches when the singular field has any value.",
+    note: "Matches when the viewer has any value for that field.",
   },
   {
     op: "and",
@@ -113,8 +113,9 @@ export default function DocsPersonalizePage() {
       </h1>
       <p className="docs-lede">
         One Linky, different tabs per viewer. Attach a{" "}
-        <code>resolutionPolicy</code> and <code>/l/[slug]</code> evaluates it
-        server-side against the viewer&apos;s Clerk identity on every click.
+        <code>resolutionPolicy</code> and Linky evaluates it against the
+        viewer&apos;s Clerk identity on every click to{" "}
+        <code>/l/[slug]</code>.
       </p>
 
       <section className="docs-section">
@@ -123,34 +124,36 @@ export default function DocsPersonalizePage() {
           <code>{POLICY_SHAPE}</code>
         </pre>
         <p>
-          Missing <code>id</code>s are minted server-side. Missing{" "}
-          <code>stopOnMatch</code> defaults to <code>true</code> (first match
-          wins); missing <code>showBadge</code> defaults to <code>false</code>
-          {" "}(rule names stay private unless you opt in).
+          Omit <code>id</code> and Linky mints one for you. Omit{" "}
+          <code>stopOnMatch</code> and the first match wins; omit{" "}
+          <code>showBadge</code> and the rule name stays private to you.
         </p>
       </section>
 
       <section className="docs-section">
         <p className="terminal-label">Viewer fields</p>
         <p>
-          <strong>Singular</strong>: <code>email</code>,{" "}
+          <strong>Single-value fields</strong>: <code>email</code>,{" "}
           <code>emailDomain</code>, <code>userId</code>,{" "}
-          <code>githubLogin</code>, <code>googleEmail</code>.
+          <code>githubLogin</code>, <code>googleEmail</code>. Each holds one
+          value per viewer.
         </p>
         <p>
-          <strong>Set-valued</strong> (viewer&apos;s full membership set, not
-          active workspace): <code>orgIds</code>, <code>orgSlugs</code>.
+          <strong>Plural fields</strong> (hold multiple values per viewer):{" "}
+          <code>orgIds</code>, <code>orgSlugs</code>. These are the viewer&apos;s
+          full organization membership list — not just whichever workspace
+          they have active.
         </p>
         <p>
-          <code>in</code> is the only operator that accepts set-valued fields.{" "}
-          <code>equals</code>, <code>endsWith</code>, and <code>exists</code>
-          {" "}against <code>orgIds</code> / <code>orgSlugs</code> are
-          rejected at parse time — use <code>in</code> with a
-          single-element <code>value</code> array instead.
+          <code>in</code> is the only operator you can use against a plural
+          field. <code>equals</code>, <code>endsWith</code>, and{" "}
+          <code>exists</code> against <code>orgIds</code> /{" "}
+          <code>orgSlugs</code> are rejected with a 400 — use <code>in</code>{" "}
+          with a single-element <code>value</code> array instead.
         </p>
         <p>
-          The mapping from Clerk to viewer fields lives in{" "}
-          <Link href="/docs/authentication">Authentication</Link>.
+          How Clerk identity maps into these fields is documented on the{" "}
+          <Link href="/docs/authentication">Authentication</Link> page.
         </p>
       </section>
 
@@ -183,32 +186,31 @@ export default function DocsPersonalizePage() {
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">Evaluator semantics</p>
+        <p className="terminal-label">How Linky evaluates your rules</p>
         <ul>
           <li>
-            Rules evaluate top-to-bottom. <code>stopOnMatch: true</code>{" "}
-            (the default) fires the first match and stops;{" "}
-            <code>stopOnMatch: false</code> appends its{" "}
-            <code>tabs</code> and evaluation continues.
+            Rules are checked top-to-bottom. With{" "}
+            <code>stopOnMatch: true</code> (the default) the first matching
+            rule fires and the viewer gets that rule&apos;s tabs. With{" "}
+            <code>stopOnMatch: false</code> the rule&apos;s tabs are appended
+            and evaluation continues down the list.
           </li>
           <li>
-            Missing viewer fields never throw — they return{" "}
-            <code>false</code> at the leaf operator.
+            A rule that references a field the viewer doesn&apos;t have just
+            fails to match — it never errors.
           </li>
           <li>
-            Empty policies (<code>{}</code> or{" "}
-            <code>{"{ version: 1, rules: [] }"}</code>) short-circuit the
-            resolver. Clerk is skipped entirely and the public{" "}
-            <code>linkies.urls</code> list serves.
+            An empty or missing policy skips evaluation entirely; every
+            viewer gets the public tab set.
           </li>
           <li>
-            Rule names are private by default. The matched rule&apos;s{" "}
-            <code>name</code> is surfaced to the viewer only when{" "}
-            <code>showBadge: true</code>.
+            Rule names are private by default. The viewer only sees the
+            matched rule&apos;s <code>name</code> when you set{" "}
+            <code>showBadge: true</code> on that rule.
           </li>
           <li>
-            Fallback when nothing matches is always{" "}
-            <code>linkies.urls</code> — the public tab set.
+            When nothing matches, the viewer always gets the public tab set
+            you supplied as <code>urls</code>.
           </li>
         </ul>
       </section>
@@ -239,7 +241,8 @@ export default function DocsPersonalizePage() {
             (<code>equals email</code>, <code>endsWith emailDomain</code>,{" "}
             <code>in orgSlugs</code>, <code>anonymous</code>,{" "}
             <code>signedIn</code>) plus a <strong>Preview as</strong> control
-            that runs the same pure evaluator as <code>/l/[slug]</code>.
+            that runs your rules against a sample viewer exactly the way{" "}
+            <code>/l/[slug]</code> would.
           </li>
           <li>
             <strong>Advanced (JSON)</strong> — raw policy with validation on

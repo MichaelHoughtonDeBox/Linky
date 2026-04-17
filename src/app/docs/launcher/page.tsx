@@ -14,20 +14,19 @@ export default function DocsLauncherPage() {
       </p>
 
       <section className="docs-section">
-        <p className="terminal-label">Resolution</p>
+        <p className="terminal-label">What the viewer gets</p>
         <p>
-          On every click the server looks up <code>linkies.resolution_policy</code>.
-          If it&apos;s empty, Clerk is skipped and <code>linkies.urls</code>{" "}
-          serves directly. Otherwise it builds a viewer context (see{" "}
-          <Link href="/docs/authentication">Authentication</Link>) and
-          evaluates the policy; the first matching rule wins (unless{" "}
-          <code>stopOnMatch: false</code> appends it and evaluation
-          continues).
+          When you attach a policy, every click is evaluated against the
+          viewer&apos;s Clerk identity (see{" "}
+          <Link href="/docs/authentication">Authentication</Link>) and the
+          first matching rule&apos;s tabs are served. <code>stopOnMatch: false</code>{" "}
+          lets later rules append more tabs.
         </p>
         <p>
-          Unmatched viewers — anonymous or signed-in — always fall through to
-          the public tab set. A Linky with a policy is safe to paste in a
-          public channel.
+          If no rule matches — whether the viewer is anonymous or signed-in —
+          they get the public tab set. That makes a Linky with a policy safe
+          to paste in a public channel: the personalized tabs only surface
+          for the viewers you targeted.
         </p>
       </section>
 
@@ -52,8 +51,9 @@ export default function DocsLauncherPage() {
           the viewer sees only their tab set.
         </p>
         <p>
-          The policy itself is never shipped to the client. Only the resolved
-          tab list and the optional matched-rule name cross the wire.
+          The policy itself never leaves the server. The viewer&apos;s
+          browser only ever sees the tab list they resolved to — and, when
+          <code>showBadge</code> is on, the name of the matched rule.
         </p>
       </section>
 
@@ -71,9 +71,9 @@ export default function DocsLauncherPage() {
       <section className="docs-section">
         <p className="terminal-label">Not found / deleted</p>
         <p>
-          Unknown slugs return 404. Soft-deleted Linkies also return 404 from
-          the public resolver — the underlying row survives for audit but the
-          launcher treats them as gone.
+          Unknown slugs return 404. Deleted Linkies also return 404 — the
+          launcher treats them as gone. The version history is retained, so
+          an owner can still inspect what the bundle used to contain.
         </p>
       </section>
 
