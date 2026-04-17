@@ -83,81 +83,52 @@ export default async function Home() {
           <p className="terminal-label mb-4">
             Open source · Agent-first · MIT
           </p>
+          {/*
+            H1 is now a four-word, fragment-style tagline. The many->one
+            parallel IS the product in a single visual beat, the brand is
+            in the H1, and a stranger doesn't need an LOTR reference to
+            parse it. Previous tagline ("One Linky to open them all.")
+            carried a cleverness tax + an ambiguous "them" pronoun — fine
+            once you know the product, but a drag for first-time readers.
+          */}
           <h1 className="display-title mb-5 text-5xl leading-[0.9] font-semibold text-foreground sm:text-6xl">
-            One Linky to open them all.
+            Many URLs. One Linky.
           </h1>
 
           {/*
-            New plain-English lead. Replaces the old "launch orchestration"
-            paragraph. Goal: a brand-new visitor understands what Linky does
-            within the first 15 seconds — concrete verb, concrete artifact.
+            Two-line lead, deliberately split:
+              - Line 1 (large, un-muted) names the outcome: a short link
+                that opens every tab, for any caller. Avoids restating
+                the H1's many->one frame — that would be tautological
+                now that the H1 carries it directly.
+              - Line 2 (smaller, muted) carries the "how + where" — what
+                you actually do with Linky and the surfaces it works on.
+            Splits comprehension into two scannable beats instead of
+            cramming the verb + audience + outcome into one sentence
+            (the Sweep-1 "sentence trying to say too much" trap).
           */}
-          <p className="terminal-muted max-w-3xl text-base leading-relaxed sm:text-lg">
-            Bundle many URLs into one short launch link. Share it so agents
-            and humans can hand off full context at scale — one click, every
-            tab opens.
+          <p className="site-hero-lead max-w-3xl text-xl leading-snug font-medium text-foreground sm:text-2xl">
+            One short link that opens every tab — for humans or agents
+            alike.
+          </p>
+          <p className="terminal-muted mt-3 max-w-3xl text-base leading-relaxed sm:text-lg">
+            Paste your list, share the link. Works the same in any
+            browser, CLI, or agent prompt.
           </p>
 
           {/*
-            Three-bullet benefit strip. The user's explicit ask: "put the
-            benefits out very, very soon." Each line answers a "so what?"
-            question a new reader has on first paint.
+            Earlier drafts had a three-bullet benefit strip + a
+            personalization paragraph sitting between the lead and the
+            CTAs. Both were pulled because the H1 + two-line lead now
+            carry the whole "what is this, what does it do" argument —
+            the bullets were restating it in lower-weight prose. Net-new
+            info those sections carried has moved:
+              - "Free / no signup / MIT-licensed" → microcopy under the
+                CTAs, where anxiety-reducers land at the conversion
+                moment instead of padding the hero.
+              - Personalization detail → already covered in three FAQ
+                entries lower on the page. Trust the FAQ to carry it.
           */}
-          <ul className="site-benefit-strip mt-6">
-            <li className="site-benefit-item">
-              <span className="site-benefit-marker" aria-hidden="true">
-                ›
-              </span>
-              <span>
-                <strong className="text-foreground">
-                  Many URLs in, one short URL out.
-                </strong>{" "}
-                <span className="terminal-muted">
-                  No more walls of links in chat.
-                </span>
-              </span>
-            </li>
-            <li className="site-benefit-item">
-              <span className="site-benefit-marker" aria-hidden="true">
-                ›
-              </span>
-              <span>
-                <strong className="text-foreground">
-                  Humans and agents share the same Linky.
-                </strong>{" "}
-                <span className="terminal-muted">
-                  One click opens every saved tab — from any browser, CLI, or
-                  agent prompt.
-                </span>
-              </span>
-            </li>
-            <li className="site-benefit-item">
-              <span className="site-benefit-marker" aria-hidden="true">
-                ›
-              </span>
-              <span>
-                <strong className="text-foreground">
-                  Free and open source.
-                </strong>{" "}
-                <span className="terminal-muted">
-                  Anonymous creation by default — no signup to ship your
-                  first Linky. Self-host if you prefer.
-                </span>
-              </span>
-            </li>
-          </ul>
-
-          {/*
-            Personalization kept in-hero but demoted to a smaller, optional
-            "Need more?" line. Strips the "identity resolves at click time"
-            jargon that was blocking comprehension for new readers.
-          */}
-          <p className="terminal-muted mt-6 max-w-3xl text-sm leading-relaxed sm:text-base">
-            Need per-viewer tabs? Attach a policy and the same Linky opens a
-            different bundle for each viewer — still safe to share publicly,
-            since unknown viewers fall through to the public bundle.
-          </p>
-
           <div className="site-hero-cta-row mt-7 flex flex-wrap gap-2">
             {isSignedIn ? (
               <>
@@ -183,9 +154,9 @@ export default async function Home() {
             ) : (
               <>
                 {/*
-                  Primary signed-out CTA now points at the live demo
-                  (anonymous, zero-friction). That matches the anonymous-
-                  creation positioning — the fastest path to value is the
+                  Primary signed-out CTA points at the live demo
+                  (anonymous, zero-friction). Matches the anonymous-
+                  creation positioning — fastest path to value is the
                   textarea below the fold, not a Clerk sign-in dialog.
                 */}
                 <Link
@@ -209,6 +180,21 @@ export default async function Home() {
               </>
             )}
           </div>
+
+          {/*
+            Sub-CTA reassurance line. Keeps the three anxiety-reducers
+            adjacent to the conversion moment:
+              - "No signup, no credit card" — confirms the free/anon
+                promise right next to the primary CTA.
+              - "MIT-licensed, self-host anytime" — escape-hatch
+                reassurance for the OSS-preferring crowd.
+            Kept intentionally small (terminal-muted, xs) so it reads
+            as legal-style reassurance rather than competing with the
+            CTAs themselves.
+          */}
+          <p className="terminal-muted mt-3 text-xs sm:text-sm">
+            No signup, no credit card. MIT-licensed — self-host anytime.
+          </p>
         </section>
 
         <LiveLinkyDemo />

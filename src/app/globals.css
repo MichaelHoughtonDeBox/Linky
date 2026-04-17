@@ -151,6 +151,16 @@ body::before {
   max-width: 46rem;
 }
 
+/*
+ * Large tagline-style lead that sits directly under the H1.
+ * Tighter tracking than the default mono body — the line needs to
+ * read as a single, scannable product-definition statement, not
+ * as a wall of monospace characters.
+ */
+.site-hero-lead {
+  letter-spacing: -0.01em;
+}
+
 .site-section {
   margin-top: clamp(3.25rem, 8vw, 6rem);
 }
@@ -164,47 +174,9 @@ body::before {
 }
 
 /*
- * Hero benefit strip: three scannable, scan-in-one-breath lines directly
- * below the hero lead. Divider-less vertical list with generous line
- * height and a subtle chevron — lets a first-time visitor understand
- * what Linky gives them before they decide whether to keep reading.
- */
-.site-benefit-strip {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.85rem;
-  max-width: 46rem;
-}
-
-.site-benefit-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.7rem;
-  font-size: 0.95rem;
-  line-height: 1.65;
-}
-
-@media (min-width: 640px) {
-  .site-benefit-item {
-    font-size: 1rem;
-  }
-}
-
-.site-benefit-marker {
-  display: inline-flex;
-  flex-shrink: 0;
-  width: 1rem;
-  color: var(--foreground);
-  font-weight: 600;
-  padding-top: 0.08rem;
-}
-
-/*
- * The hero CTA row sits farther from the last paragraph now — with the
- * added benefit strip + personalization line above, it needs to feel
- * like a distinct "act" rather than glued to prose.
+ * The hero CTA row sits slightly farther from the lead. With the
+ * stripped-down hero (H1 + 2-line lead + CTAs) this pad is what keeps
+ * the CTAs reading as a distinct "act" instead of glued to prose.
  */
 .site-hero-cta-row {
   padding-top: 0.25rem;
