@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 
 import { LiveLinkyDemo } from "@/components/site/live-linky-demo";
 import { SiteHeader } from "@/components/site/site-header";
@@ -20,7 +21,7 @@ const FAQ_ITEMS = [
   {
     question: "Do I need an account?",
     answer:
-      "Not yet. Link creation is public and agent-friendly while account features are in progress.",
+      "No. Anonymous creation stays free and frictionless — every POST /api/links without auth still returns a claim URL so you can bind the Linky to an account later. Accounts unlock editing, renaming, team workspaces, and version history.",
   },
   {
     question: "Can my agent create Linky links directly?",
@@ -34,7 +35,15 @@ const FAQ_ITEMS = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  // Resolve auth state server-side so the hero CTAs render correctly on
+  // first paint — no client-hydration flash, and no reliance on Clerk's
+  // browser JS mounting before the buttons make sense. (Client-side
+  // hydration can fail entirely if Clerk DNS / TLS isn't fully configured
+  // on a new production instance; server-side `auth()` is unaffected.)
+  const session = await auth();
+  const isSignedIn = Boolean(session.userId);
+
   return (
     <div className="terminal-stage flex flex-1 items-start justify-center px-5 py-5 sm:py-6">
       <main className="site-shell w-full max-w-6xl p-5 sm:p-6 lg:p-7">
@@ -53,9 +62,29 @@ export default function Home() {
             <Link href="/docs" className="terminal-secondary px-4 py-2 text-sm">
               Read docs
             </Link>
-            <Link href="/signup" className="terminal-secondary px-4 py-2 text-sm">
-              Sign up (coming soon)
-            </Link>
+            {isSignedIn ? (
+              <Link
+                href="/dashboard"
+                className="terminal-action px-4 py-2 text-sm"
+              >
+                Open dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/signin"
+                  className="terminal-action px-4 py-2 text-sm"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="terminal-secondary px-4 py-2 text-sm"
+                >
+                  Create account
+                </Link>
+              </>
+            )}
           </div>
         </section>
 
