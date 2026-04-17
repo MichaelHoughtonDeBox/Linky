@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Mono } from "next/font/google";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 const linkyDisplay = Bricolage_Grotesque({
@@ -63,12 +64,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ClerkProvider must wrap the entire app so Clerk hooks/components work
+  // in both Server and Client components. Anonymous users see no UI change
+  // because Linky's public surface does not render auth-dependent UI by default.
   return (
-    <html
-      lang="en"
-      className={`${linkyDisplay.variable} ${linkyMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
+    // `afterSignOutUrl` is the single source of truth for post-sign-out
+    // destination across every Clerk surface (UserButton, SignOutButton,
+    // programmatic `signOut()`). Keep it here so UI components stay clean.
+    <ClerkProvider afterSignOutUrl="/">
+      <html
+        lang="en"
+        className={`${linkyDisplay.variable} ${linkyMono.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col">{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }

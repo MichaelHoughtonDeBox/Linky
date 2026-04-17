@@ -20,21 +20,41 @@ async function createLinky({
   baseUrl = DEFAULT_BASE_URL,
   source = "sdk",
   metadata,
+  email,
+  title,
+  description,
+  urlMetadata,
+  // Optional client attribution. Sent as a `Linky-Client` header so the
+  // server can attribute API calls to a specific integration for ops
+  // debugging. Format convention: `<tool>/<version>` (e.g. "cursor/skill-v1").
+  // Malformed values are silently dropped server-side — they never break
+  // the create call.
+  client,
   fetchImpl = fetch,
 }) {
   assertUrlArray(urls);
 
   const endpoint = new URL("/api/links", baseUrl).toString();
+
+  const headers = {
+    "content-type": "application/json",
+  };
+  if (typeof client === "string" && client.trim().length > 0) {
+    headers["Linky-Client"] = client.trim();
+  }
+
   const response = await fetchImpl(endpoint, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
+    headers,
     // This payload shape matches the server route contract.
     body: JSON.stringify({
       urls,
       source,
       metadata,
+      email,
+      title,
+      description,
+      urlMetadata,
     }),
   });
 
@@ -54,9 +74,19 @@ async function createLinky({
     throw new Error("Linky API returned an invalid response payload.");
   }
 
+  // claim* fields are only returned for anonymous creates. claimToken is
+  // the raw secret; claimUrl is a convenience URL that wraps it. The
+  // `warning` string is a verbatim message the caller can surface to the
+  // end user to explain one-time-only semantics.
   return {
     slug: data.slug,
     url: data.url,
+    claimUrl: typeof data.claimUrl === "string" ? data.claimUrl : undefined,
+    claimToken:
+      typeof data.claimToken === "string" ? data.claimToken : undefined,
+    claimExpiresAt:
+      typeof data.claimExpiresAt === "string" ? data.claimExpiresAt : undefined,
+    warning: typeof data.warning === "string" ? data.warning : undefined,
   };
 }
 

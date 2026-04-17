@@ -2,9 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { Show, UserButton } from "@clerk/nextjs";
 
 type SiteHeaderProps = {
-  currentPath?: "/" | "/docs" | "/signup" | "/l";
+  currentPath?:
+    | "/"
+    | "/docs"
+    | "/signin"
+    | "/signup"
+    | "/dashboard"
+    | "/l";
 };
 
 const GITHUB_REPO_URL = "https://github.com/MichaelHoughtonDeBox/linky";
@@ -32,12 +39,36 @@ export function SiteHeader({ currentPath = "/" }: SiteHeaderProps) {
         >
           Docs
         </Link>
-        <Link
-          href="/signup"
-          className={`site-nav-link ${currentPath === "/signup" ? "is-active" : ""}`}
-        >
-          Sign up
-        </Link>
+
+        {/*
+          Clerk 7 replaced <SignedIn>/<SignedOut> with <Show when="...">.
+          The client-boundary export works inside a "use client" component,
+          while the server build resolves to the RSC equivalent automatically.
+        */}
+        <Show when="signed-in">
+          <Link
+            href="/dashboard"
+            className={`site-nav-link ${currentPath === "/dashboard" ? "is-active" : ""}`}
+          >
+            Dashboard
+          </Link>
+        </Show>
+
+        <Show when="signed-out">
+          <Link
+            href="/signin"
+            className={`site-nav-link ${currentPath === "/signin" ? "is-active" : ""}`}
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
+            className={`site-nav-link ${currentPath === "/signup" ? "is-active" : ""}`}
+          >
+            Sign up
+          </Link>
+        </Show>
+
         <a
           href={GITHUB_REPO_URL}
           target="_blank"
@@ -46,6 +77,17 @@ export function SiteHeader({ currentPath = "/" }: SiteHeaderProps) {
         >
           GitHub
         </a>
+
+        <Show when="signed-in">
+          <div className="ml-1 flex items-center">
+            {/*
+              Post-sign-out destination is configured on <ClerkProvider>
+              (see src/app/layout.tsx). Keeping the prop off the component
+              here avoids drift when we change the policy globally.
+            */}
+            <UserButton />
+          </div>
+        </Show>
       </nav>
     </header>
   );
