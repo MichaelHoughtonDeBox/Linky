@@ -83,28 +83,37 @@ export default async function Home() {
           <p className="terminal-label mb-4">
             Open source · Agent-first · MIT
           </p>
+          {/*
+            H1 is now a four-word, fragment-style tagline. The many->one
+            parallel IS the product in a single visual beat, the brand is
+            in the H1, and a stranger doesn't need an LOTR reference to
+            parse it. Previous tagline ("One Linky to open them all.")
+            carried a cleverness tax + an ambiguous "them" pronoun — fine
+            once you know the product, but a drag for first-time readers.
+          */}
           <h1 className="display-title mb-5 text-5xl leading-[0.9] font-semibold text-foreground sm:text-6xl">
-            One Linky to open them all.
+            Many URLs. One Linky.
           </h1>
 
           {/*
             Two-line lead, deliberately split:
-              - Line 1 (large, un-muted) is the tagline-style product
-                definition. Names the brand, names the verb, states the
-                outcome, stops. A first-time reader parses it in one
-                breath — this is the 15-second comprehension test.
-              - Line 2 (smaller, muted) carries the context that used to
-                be crammed into the same sentence: what you do with the
-                short link, who it's for.
-            Splitting avoids the Sweep-1 "sentence trying to say too much"
-            problem the earlier draft had.
+              - Line 1 (large, un-muted) names the outcome: a short link
+                that opens every tab, for any caller. Avoids restating
+                the H1's many->one frame — that would be tautological
+                now that the H1 carries it directly.
+              - Line 2 (smaller, muted) carries the "how + where" — what
+                you actually do with Linky and the surfaces it works on.
+            Splits comprehension into two scannable beats instead of
+            cramming the verb + audience + outcome into one sentence
+            (the Sweep-1 "sentence trying to say too much" trap).
           */}
           <p className="site-hero-lead max-w-3xl text-xl leading-snug font-medium text-foreground sm:text-2xl">
-            Linky lets you bundle many URLs into one.
+            One short link that opens every tab — for humans or agents
+            alike.
           </p>
           <p className="terminal-muted mt-3 max-w-3xl text-base leading-relaxed sm:text-lg">
-            Share the short link — one click opens every tab, for humans or
-            agents alike.
+            Paste your list, share the link. Works the same in any
+            browser, CLI, or agent prompt.
           </p>
 
           {/*

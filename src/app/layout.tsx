@@ -26,18 +26,18 @@ function getMetadataBase(): URL {
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
-  title: "Linky - One Linky to open them all",
+  title: "Linky - Many URLs. One Linky.",
   description:
-    "Linky lets you bundle many URLs into one. Share the short link — one click opens every tab, for humans or agents alike. Open source, agent-first, free to start.",
+    "Many URLs, one short link that opens every tab — for humans or agents alike. Paste your list, share the link. Open source, agent-first, free to start.",
   icons: {
     icon: [{ url: "/icon", type: "image/png" }],
     shortcut: [{ url: "/icon", type: "image/png" }],
     apple: [{ url: "/apple-icon", type: "image/png" }],
   },
   openGraph: {
-    title: "Linky - One Linky to open them all",
+    title: "Linky - Many URLs. One Linky.",
     description:
-      "Linky lets you bundle many URLs into one. Share the short link — one click opens every tab, for humans or agents alike. Open source, agent-first, free to start.",
+      "Many URLs, one short link that opens every tab — for humans or agents alike. Paste your list, share the link. Open source, agent-first, free to start.",
     url: "https://getalinky.com",
     siteName: "Linky",
     type: "website",
@@ -52,9 +52,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Linky - One Linky to open them all",
+    title: "Linky - Many URLs. One Linky.",
     description:
-      "Linky lets you bundle many URLs into one. Share the short link — one click opens every tab, for humans or agents alike. Open source, agent-first, free to start.",
+      "Many URLs, one short link that opens every tab — for humans or agents alike. Paste your list, share the link. Open source, agent-first, free to start.",
     images: ["/twitter-image"],
   },
 };
