@@ -23,7 +23,7 @@ const OP_EXAMPLES: { op: string; example: string; note: string }[] = [
   {
     op: "anonymous",
     example: '{ "op": "anonymous" }',
-    note: "Matches viewers with no Clerk session.",
+    note: "Matches viewers who aren't signed into Linky.",
   },
   {
     op: "signedIn",
@@ -114,8 +114,7 @@ export default function DocsPersonalizePage() {
       <p className="docs-lede">
         One Linky, different tabs per viewer. Attach a{" "}
         <code>resolutionPolicy</code> and Linky evaluates it against the
-        viewer&apos;s Clerk identity on every click to{" "}
-        <code>/l/[slug]</code>.
+        viewer&apos;s identity on every click to <code>/l/[slug]</code>.
       </p>
 
       <section className="docs-section">
@@ -152,8 +151,8 @@ export default function DocsPersonalizePage() {
           with a single-element <code>value</code> array instead.
         </p>
         <p>
-          How Clerk identity maps into these fields is documented on the{" "}
-          <Link href="/docs/authentication">Authentication</Link> page.
+          What each field means and where its value comes from is documented
+          on the <Link href="/docs/identity">Identity</Link> page.
         </p>
       </section>
 

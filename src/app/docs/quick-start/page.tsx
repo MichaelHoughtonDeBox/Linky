@@ -92,8 +92,8 @@ export default function DocsQuickStartPage() {
         <p>
           If you created anonymously and want to edit the Linky later, visit
           the <code>claimUrl</code>. You&apos;ll be prompted to sign in, then
-          the Linky gets bound to your Clerk account (or your active Clerk
-          org, if one is selected).
+          the Linky gets bound to your Linky account (or your active Linky
+          organization, if one is selected).
         </p>
         <CommandBlock title="Claim it" command={STEP_3_CLAIM} />
         <p>

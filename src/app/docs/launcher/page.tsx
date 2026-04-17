@@ -17,10 +17,11 @@ export default function DocsLauncherPage() {
         <p className="terminal-label">What the viewer gets</p>
         <p>
           When you attach a policy, every click is evaluated against the
-          viewer&apos;s Clerk identity (see{" "}
-          <Link href="/docs/authentication">Authentication</Link>) and the
-          first matching rule&apos;s tabs are served. <code>stopOnMatch: false</code>{" "}
-          lets later rules append more tabs.
+          viewer&apos;s identity (see{" "}
+          <Link href="/docs/identity">Identity</Link>) and the first
+          matching rule&apos;s tabs are served.{" "}
+          <code>stopOnMatch: false</code> lets later rules append more
+          tabs.
         </p>
         <p>
           If no rule matches — whether the viewer is anonymous or signed-in —

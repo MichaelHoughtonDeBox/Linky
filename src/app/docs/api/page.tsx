@@ -37,7 +37,7 @@ const POST_LINKS_RES = `{
 
 const PATCH_LINKS_REQ = `PATCH /api/links/:slug
 content-type: application/json
-# owner-only — Clerk session required
+# owner-only — signed-in Linky session required
 
 {
   "title": "Release review (v2)",
@@ -114,8 +114,8 @@ export default function DocsApiPage() {
         <p className="terminal-label">POST /api/links (public)</p>
         <p>
           Create a new Linky. Anonymous callers get a claim token; signed-in
-          callers get a Linky attributed to their active Clerk org (or user,
-          when no org is active).
+          callers get a Linky attributed to their active Linky organization
+          (or their user account, when no organization is active).
         </p>
         <pre className="docs-json">
           <code>{POST_LINKS_REQ}</code>
@@ -229,7 +229,7 @@ export default function DocsApiPage() {
                 <td>
                   <code>AUTH_REQUIRED</code>
                 </td>
-                <td>Route requires a Clerk session.</td>
+                <td>Route requires a signed-in Linky session.</td>
               </tr>
               <tr>
                 <td>403</td>

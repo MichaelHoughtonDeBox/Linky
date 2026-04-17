@@ -17,7 +17,7 @@ export const DOCS_NAV: DocsNavGroup[] = [
       { href: "/docs", label: "Overview" },
       { href: "/docs/install", label: "Install" },
       { href: "/docs/quick-start", label: "Quick start" },
-      { href: "/docs/authentication", label: "Authentication" },
+      { href: "/docs/identity", label: "Identity" },
     ],
   },
   {

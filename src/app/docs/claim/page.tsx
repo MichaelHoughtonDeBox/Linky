@@ -9,7 +9,7 @@ export default function DocsClaimPage() {
       </h1>
       <p className="docs-lede">
         The agent-to-human handoff. An agent creates a Linky on your behalf,
-        sends you a claim URL, and one click binds ownership to your Clerk
+        sends you a claim URL, and one click binds ownership to your Linky
         account.
       </p>
 
@@ -17,9 +17,9 @@ export default function DocsClaimPage() {
         <p className="terminal-label">Lifecycle</p>
         <ul>
           <li>
-            Agent calls <code>POST /api/links</code> (or CLI / SDK) without a
-            Clerk session. Linky creates the bundle anonymously and mints a
-            claim token that expires in 30 days.
+            Agent calls <code>POST /api/links</code> (or CLI / SDK) without
+            a signed-in Linky session. Linky creates the bundle anonymously
+            and mints a claim token that expires in 30 days.
           </li>
           <li>
             Response returns <code>claimToken</code>, <code>claimUrl</code>,{" "}
@@ -79,10 +79,11 @@ export default function DocsClaimPage() {
       <section className="docs-section">
         <p className="terminal-label">Ownership rules at claim time</p>
         <p>
-          Org context wins. If the claiming user has an active Clerk org,
-          ownership is attributed to the org (team-owned). Switch to Personal
-          in the Clerk org switcher before claiming to attribute to your
-          individual user instead.
+          Organization context wins. If the claiming user has an active
+          Linky organization, ownership is attributed to the organization
+          (team-owned). Switch to your personal account in the organization
+          switcher before claiming to attribute to your individual user
+          instead.
         </p>
         <p>
           Claiming is a no-op on bundles that already have an owner — prevents
@@ -125,7 +126,7 @@ export default function DocsClaimPage() {
       <nav className="docs-next" aria-label="Next steps">
         <span>Next:</span>
         <Link href="/docs/api">API reference</Link>
-        <Link href="/docs/authentication">Authentication</Link>
+        <Link href="/docs/identity">Identity</Link>
       </nav>
     </>
   );

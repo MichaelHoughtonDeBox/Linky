@@ -73,7 +73,8 @@ export default function DocsCreatePage() {
       <p className="docs-lede">
         <code>POST /api/links</code> is public. Anonymous callers get a claim
         token back; signed-in callers get a Linky attributed to their active
-        Clerk org (or user, when no org is active).
+        Linky organization (or their user account, when no organization is
+        active).
       </p>
 
       <section className="docs-section">
