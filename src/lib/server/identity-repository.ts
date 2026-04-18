@@ -182,6 +182,33 @@ export async function getOrganizationNameByClerkId(
   return result.rows[0]?.name ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Membership-role lookup (Sprint 2.7 Chunk C).
+//
+// Source of truth: `memberships.role` populated by the Clerk webhook. The
+// raw Clerk role slug is returned — callers must funnel through
+// `deriveMembershipRole` in `auth.ts` before making an access decision.
+//
+// Session subjects already carry `session.orgRole`; this helper mostly
+// exists for (a) org-scoped API keys that want to enforce role checks
+// against the issuing user (not used in Chunk C — org API keys keep their
+// effective role as `editor` until Chunk D scope claims change that), and
+// (b) the team page in Chunk E, which needs to list every member's role
+// without reaching back into Clerk.
+// ---------------------------------------------------------------------------
+
+export async function getMembershipRole(
+  clerkUserId: string,
+  clerkOrgId: string,
+): Promise<string | null> {
+  const pool = getPgPool();
+  const result = await pool.query<{ role: string }>(
+    `SELECT role FROM memberships WHERE clerk_user_id = $1 AND clerk_org_id = $2 LIMIT 1`,
+    [clerkUserId, clerkOrgId],
+  );
+  return result.rows[0]?.role ?? null;
+}
+
 export async function getUserDisplayNameByClerkId(
   clerkUserId: string,
 ): Promise<{ displayName: string | null; email: string | null } | null> {
