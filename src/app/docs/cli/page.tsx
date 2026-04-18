@@ -21,6 +21,13 @@ const EX_POLICY_STDIN = [
   '  --email alice@acme.com',
 ].join("\n");
 
+const EX_AUTH_SET_KEY = "linky auth set-key $LINKY_API_KEY";
+
+const EX_UPDATE =
+  'linky update abc123 --title "Release bundle v2" --policy ./policy.json';
+
+const EX_WHOAMI = "linky auth whoami --json";
+
 export default function DocsCliPage() {
   return (
     <>
@@ -38,7 +45,11 @@ export default function DocsCliPage() {
         <p className="terminal-label">Usage</p>
         <pre className="docs-json">
           <code>{`linky create <url1> <url2> [url3] ... [options]
-linky <url1> <url2> [url3] ... [options]`}</code>
+linky <url1> <url2> [url3] ... [options]
+linky update <slug> [options]
+linky auth set-key <apiKey>
+linky auth clear
+linky auth whoami [options]`}</code>
         </pre>
         <p>
           The <code>create</code> subcommand is optional — any positional
@@ -47,7 +58,7 @@ linky <url1> <url2> [url3] ... [options]`}</code>
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">Options</p>
+        <p className="terminal-label">Create options</p>
         <div className="docs-table-wrap">
           <table className="docs-table">
             <thead>
@@ -138,6 +149,111 @@ linky <url1> <url2> [url3] ... [options]`}</code>
       </section>
 
       <section className="docs-section">
+        <p className="terminal-label">Update options</p>
+        <div className="docs-table-wrap">
+          <table className="docs-table">
+            <thead>
+              <tr>
+                <th>Flag</th>
+                <th>Value</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code>--title</code>
+                </td>
+                <td>string</td>
+                <td>Replace the Linky title.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--description</code>
+                </td>
+                <td>string</td>
+                <td>Replace the description.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--description-null</code>
+                </td>
+                <td>—</td>
+                <td>Clear the description.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--url</code>
+                </td>
+                <td>url</td>
+                <td>
+                  Repeat to replace the full ordered URL list.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--urls-file</code>
+                </td>
+                <td>path</td>
+                <td>
+                  Replace the URL list from a newline-delimited file.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--policy</code>
+                </td>
+                <td>path</td>
+                <td>Replace the full resolution policy from JSON.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--clear-policy</code>
+                </td>
+                <td>—</td>
+                <td>Clear the resolution policy.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--api-key</code>
+                </td>
+                <td>key</td>
+                <td>
+                  Override the stored or env API key for this one command.
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>--json</code>
+                </td>
+                <td>—</td>
+                <td>Machine-readable response payload.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="docs-section">
+        <p className="terminal-label">Automation auth</p>
+        <p>
+          Owner-only CLI commands authenticate with a bearer API key, not a
+          browser session. Create a key in the dashboard, then provide it via:
+        </p>
+        <ol className="list-decimal space-y-1 pl-5 text-sm sm:text-base">
+          <li>
+            <code>--api-key</code>
+          </li>
+          <li>
+            <code>$LINKY_API_KEY</code>
+          </li>
+          <li>
+            stored config from <code>linky auth set-key</code>
+          </li>
+        </ol>
+      </section>
+
+      <section className="docs-section">
         <p className="terminal-label">Examples</p>
         <CommandBlock
           title="Basic create"
@@ -163,6 +279,21 @@ linky <url1> <url2> [url3] ... [options]`}</code>
           title="URLs from stdin, machine-readable"
           command={EX_STDIN}
           note="Combine --stdin and --json for scripted pipelines."
+        />
+        <CommandBlock
+          title="Store an API key locally"
+          command={EX_AUTH_SET_KEY}
+          note="Writes the key to ~/.config/linky/config.json with user-only permissions."
+        />
+        <CommandBlock
+          title="Update an owned Linky"
+          command={EX_UPDATE}
+          note="Uses your stored or env API key and appends a new version to history."
+        />
+        <CommandBlock
+          title="Check the active automation subject"
+          command={EX_WHOAMI}
+          note="Verifies the current API key and shows whether it authenticates as a user or org."
         />
       </section>
 

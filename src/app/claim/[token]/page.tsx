@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/site/site-header";
-import { getAuthSubject } from "@/lib/server/auth";
+import { getAuthSubject, requireSessionUserId } from "@/lib/server/auth";
 import {
   consumeClaimToken,
   lookupClaimToken,
@@ -224,9 +224,13 @@ export default async function ClaimTokenPage({ params }: PageProps) {
   }
 
   // Signed-in: attempt to consume atomically.
+  // Claim consumption must stay tied to a real Clerk user session even after
+  // API keys land for CLI / MCP auth. A machine credential should never be
+  // able to "claim" anonymous ownership on behalf of a human.
+  const sessionUserId = await requireSessionUserId();
   const result = await consumeClaimToken({
     token,
-    clerkUserId: subject.userId,
+    clerkUserId: sessionUserId,
     clerkOrgId: subject.type === "org" ? subject.orgId : null,
   });
 

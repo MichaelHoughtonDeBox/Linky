@@ -336,7 +336,7 @@ export async function listLinkiesForSubject(
 export type PatchLinkyInput = {
   slug: string;
   patch: PatchLinkyPayload;
-  editedByClerkUserId: string;
+  editedByClerkUserId: string | null;
 };
 
 export async function patchLinkyRecord(
@@ -443,7 +443,7 @@ function mergePatch(
 async function appendVersion(
   client: PoolClient,
   row: DbLinkyRow,
-  editedByClerkUserId: string,
+  editedByClerkUserId: string | null,
 ): Promise<void> {
   const existing = await client.query<{ next_version: number }>(
     `

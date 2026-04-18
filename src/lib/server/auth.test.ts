@@ -30,6 +30,12 @@ const ORG_Y_USER_A: AuthSubject = {
   userId: "user_A",
   role: "admin",
 };
+const ORG_X_API_KEY: AuthSubject = {
+  type: "org",
+  orgId: "org_X",
+  userId: null,
+  role: null,
+};
 
 const ANON_LINKY: LinkyOwnership = {
   ownerUserId: null,
@@ -68,6 +74,10 @@ describe("canEditLinky", () => {
     expect(canEditLinky(ORG_X_USER_A, ORG_X_LINKY)).toBe(true);
   });
 
+  it("allows an org-scoped API key to edit an org-owned Linky", () => {
+    expect(canEditLinky(ORG_X_API_KEY, ORG_X_LINKY)).toBe(true);
+  });
+
   it("denies a user in a different org from editing an org-owned Linky", () => {
     expect(canEditLinky(ORG_Y_USER_A, ORG_X_LINKY)).toBe(false);
   });
@@ -84,6 +94,12 @@ describe("canEditLinky", () => {
     // user-owned ownership path too. This matches Clerk's semantics where
     // a user's personal identity is preserved across org switches.
     expect(canEditLinky(ORG_X_USER_A, USER_A_LINKY)).toBe(true);
+  });
+
+  it("denies an org-scoped API key from editing a user-owned Linky", () => {
+    // Org automation acts as the team only. It must not inherit the creator's
+    // personal identity, or a team key could reach user-owned bundles.
+    expect(canEditLinky(ORG_X_API_KEY, USER_A_LINKY)).toBe(false);
   });
 });
 

@@ -17,15 +17,9 @@
 
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Routes that require a signed-in user. Everything else is public by default.
-// The public resolver `/l/[slug]` and the anonymous `POST /api/links` surface
-// must stay accessible to anonymous agents and humans.
-const isProtectedRoute = createRouteMatcher([
-  "/dashboard(.*)",
-  // Owner-only Linky management surface.
-  "/api/me/(.*)",
-  "/api/links/(.*)/versions",
-]);
+// Dashboard stays Clerk-native. API routes get finer-grained handling below so
+// bearer-auth automation can coexist with browser sessions.
+const isProtectedDashboardRoute = createRouteMatcher(["/dashboard(.*)"]);
 
 // Methods that mutate an owned Linky. POST remains public (anonymous create).
 // We cannot gate solely by path for `/api/links/:slug` because the resolver
@@ -33,10 +27,17 @@ const isProtectedRoute = createRouteMatcher([
 const MUTATING_METHODS = new Set(["PATCH", "DELETE"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
+  if (isProtectedDashboardRoute(req)) {
     await auth.protect();
     return;
   }
+
+  // Protect owner-only API methods while still admitting bearer-auth requests
+  // (API keys for CLI / SDK / future MCP). Dashboard pages remain Clerk-only
+  // above; this branch is API-only.
+  const hasBearerToken = /^Bearer\s+\S+/i.test(
+    req.headers.get("authorization") ?? "",
+  );
 
   // Protect PATCH/DELETE on `/api/links/:slug` without blocking the public
   // create endpoint (POST /api/links). This keeps the anonymous flow open.
@@ -45,6 +46,25 @@ export default clerkMiddleware(async (auth, req) => {
     /^\/api\/links\/[^/]+$/.test(req.nextUrl.pathname);
 
   if (isLinkyMutation) {
+    if (hasBearerToken) return;
+    await auth.protect();
+  }
+
+  if (
+    req.method === "GET" &&
+    /^\/api\/links\/[^/]+\/versions$/.test(req.nextUrl.pathname)
+  ) {
+    if (hasBearerToken) return;
+    await auth.protect();
+  }
+
+  if (req.method === "GET" && req.nextUrl.pathname === "/api/me/links") {
+    if (hasBearerToken) return;
+    await auth.protect();
+  }
+
+  if (/^\/api\/me\/keys(?:\/\d+)?$/.test(req.nextUrl.pathname)) {
+    if (hasBearerToken) return;
     await auth.protect();
   }
 });

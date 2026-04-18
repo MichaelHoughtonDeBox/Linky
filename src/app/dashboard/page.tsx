@@ -133,6 +133,14 @@ export default async function DashboardPage() {
           Switch workspace above to see bundles owned by a different account
           or team.
         </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/api-keys"
+            className="terminal-secondary px-3 py-1.5 text-xs sm:text-sm"
+          >
+            Manage API keys
+          </Link>
+        </div>
       </header>
 
       {linkies.length === 0 ? (
