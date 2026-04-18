@@ -64,6 +64,12 @@ function LinkyRow({
           Open
         </a>
         <Link
+          href={`/dashboard/links/${linky.slug}/insights`}
+          className="terminal-secondary px-3 py-1.5 text-xs sm:text-sm"
+        >
+          Insights
+        </Link>
+        <Link
           href={`/dashboard/links/${linky.slug}`}
           className="terminal-secondary px-3 py-1.5 text-xs sm:text-sm"
         >

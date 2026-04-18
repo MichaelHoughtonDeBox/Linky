@@ -78,6 +78,25 @@ export default async function DashboardLinkyEditPage({ params }: PageProps) {
         </Link>
       </header>
 
+      {/* Tab bar — Edit (current) + Insights. Symmetry with /insights/
+          page. Viewers reach the insights tab via the dashboard list
+          or by sharing a direct URL; editors see both surfaces. */}
+      <nav className="insights-tabs mb-5 flex flex-wrap gap-2 border-b border-[var(--panel-border)] pb-3">
+        <Link
+          href={`/dashboard/links/${linky.slug}`}
+          className="terminal-action px-3 py-1.5 text-xs sm:text-sm"
+          aria-current="page"
+        >
+          Edit
+        </Link>
+        <Link
+          href={`/dashboard/links/${linky.slug}/insights`}
+          className="terminal-secondary px-3 py-1.5 text-xs sm:text-sm"
+        >
+          Insights
+        </Link>
+      </nav>
+
       <LinkyEditor
         slug={linky.slug}
         initialTitle={linky.title}
