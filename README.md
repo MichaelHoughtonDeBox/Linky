@@ -639,6 +639,23 @@ several of these are different by design.
   `POST /api/links` attributes to the org (team-owned). Switch to Personal
   to create individually-owned Linkies. Same rule applies to the claim
   flow.
+- **Three derived roles on team workspaces.** Linky maps your Clerk org
+  role onto `admin` / `editor` / `viewer`. `org:admin` → admin (view +
+  edit + delete + manage keys). `org:member` → editor (view + edit, no
+  delete, no keys). Any `linky:editor:*` custom role → editor. Anything
+  else → viewer (read-only). Privilege escalation to admin only goes
+  through `org:admin`. Delete is admin-only on purpose — delete is soft
+  but recovery needs a database write, so we keep that out of editor
+  hands by default. Full table, mapping rules, and promotion guide live
+  at [`/docs/access-control`](https://getalinky.com/docs/access-control).
+  Admins can see the current member list at `/dashboard/team`.
+- **API keys scope down, not up.** Every key carries one of
+  `links:read` / `links:write` / `keys:admin`. A leaked `links:read` key
+  cannot edit or delete. A `links:write` key cannot manage other keys.
+  Scope is locked at mint; to change it, revoke and re-issue. Team API
+  keys also carry the team's derived role, not the minting human's —
+  they cap at editor unless the admin explicitly mints a
+  `keys:admin`-scoped key.
 - **Edits are append-only.** `PATCH /api/links/:slug` inserts a row into
   `linky_versions`; old state is preserved forever. `DELETE /api/links/:slug`
   soft-deletes (the public resolver returns 404; the row survives for
@@ -670,7 +687,7 @@ several of these are different by design.
 - [x] **Identity-aware URL resolution** — same Linky, different tabs per viewer. Sprint 2.
 - [x] **Policy at create time via CLI / SDK / API** (`--policy` flag, `createLinky({ resolutionPolicy })`, `POST /api/links` accepts `resolutionPolicy`) — Sprint 2.5.
 - [ ] **`linky update <slug>` CLI command** — post-create policy editing from the terminal. Sprint 2.6.
-- [ ] **Analytics + access control** — team plan foundation. Sprint 2.7 plan lives at [`.agents/sprint-2.7-plan.md`](./.agents/sprint-2.7-plan.md) — launcher-event instrumentation, role-aware ownership (`viewer` / `editor` / `admin` derived from `memberships.role`), and scoped API keys (`links:read` / `links:write` / `keys:admin`).
+- [x] **Analytics + access control** — team plan foundation. Sprint 2.7. Launcher-event instrumentation (owner-only, no viewer tracking), role-aware ownership (`viewer` / `editor` / `admin` derived from `memberships.role`), scoped API keys (`links:read` / `links:write` / `keys:admin`), and the read-only team page. See [`/docs/access-control`](./src/app/docs/access-control/page.tsx) or the live page at `/docs/access-control`.
 - [ ] **First-class MCP server + "linky session" convention** — other frameworks can adopt; publish the spec.
 - [ ] **Cursor / Claude / ChatGPT-native skills** — emit a Linky at the end of every task.
 - [ ] **Browser extension** — tab-group capture and restore.
