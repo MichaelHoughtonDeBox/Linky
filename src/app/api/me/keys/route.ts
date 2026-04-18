@@ -10,16 +10,44 @@ import {
 } from "@/lib/server/api-keys";
 import {
   AuthRequiredError,
+  ForbiddenError,
   requireAuthSubject,
+  roleOfSubject,
 } from "@/lib/server/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type KnownError = LinkyError | AuthRequiredError;
+type KnownError = LinkyError | AuthRequiredError | ForbiddenError;
 
 function isKnownError(error: unknown): error is KnownError {
-  return isLinkyError(error) || error instanceof AuthRequiredError;
+  return (
+    isLinkyError(error) ||
+    error instanceof AuthRequiredError ||
+    error instanceof ForbiddenError
+  );
+}
+
+// Sprint 2.7 Chunk C: key management is admin-only on org-owned subjects.
+// Applies to browser-session requests. Org-scoped API keys authenticating
+// this route bypass the role gate — they're assumed to be in-policy
+// already, and Chunk D's scope model (`keys:admin`) is the proper gate
+// for bearer-auth automation. User subjects are always admin of
+// themselves so this is a no-op for personal keys.
+function requireAdminForKeyManagement(
+  subject: Awaited<ReturnType<typeof requireAuthSubject>>,
+  request: NextRequest,
+): void {
+  const hasBearer = /^Bearer\s+\S+/i.test(
+    request.headers.get("authorization") ?? "",
+  );
+  if (hasBearer) return;
+
+  if (subject.type === "org" && roleOfSubject(subject) !== "admin") {
+    throw new ForbiddenError(
+      "Only org admins can manage API keys. Ask an admin to promote your role or mint the key on your behalf.",
+    );
+  }
 }
 
 function toErrorResponse(error: KnownError): Response {
@@ -52,6 +80,7 @@ function toApiKeyDto(record: ApiKeyRecord) {
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const subject = await requireAuthSubject(request);
+    requireAdminForKeyManagement(subject, request);
     const apiKeys = await listApiKeysForSubject(subject);
 
     return Response.json({
@@ -78,7 +107,8 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const subject = await requireAuthSubject();
+    const subject = await requireAuthSubject(request);
+    requireAdminForKeyManagement(subject, request);
     let rawBody: unknown;
 
     try {
@@ -134,7 +164,8 @@ export async function POST(request: NextRequest): Promise<Response> {
 
 export async function DELETE(request: NextRequest): Promise<Response> {
   try {
-    const subject = await requireAuthSubject();
+    const subject = await requireAuthSubject(request);
+    requireAdminForKeyManagement(subject, request);
     const idRaw = request.nextUrl.searchParams.get("id");
     const apiKeyId = idRaw ? Number.parseInt(idRaw, 10) : Number.NaN;
 
