@@ -148,3 +148,37 @@ CREATE INDEX IF NOT EXISTS idx_claim_tokens_linky_id
 
 CREATE INDEX IF NOT EXISTS idx_claim_tokens_expires_at
   ON claim_tokens (expires_at);
+
+-- ---------------------------------------------------------------------------
+-- API keys. Machine credentials for CLI / SDK / future MCP automation.
+-- Exactly one owner column must be set: personal key OR org key.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  key_prefix               TEXT NOT NULL UNIQUE,
+  secret_hash              TEXT NOT NULL,
+  owner_user_id            TEXT REFERENCES users(clerk_user_id) ON DELETE CASCADE,
+  owner_org_id             TEXT REFERENCES organizations(clerk_org_id) ON DELETE CASCADE,
+  name                     TEXT NOT NULL,
+  created_by_clerk_user_id TEXT REFERENCES users(clerk_user_id) ON DELETE SET NULL,
+  last_used_at             TIMESTAMPTZ,
+  revoked_at               TIMESTAMPTZ,
+  created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (
+    (owner_user_id IS NOT NULL AND owner_org_id IS NULL) OR
+    (owner_user_id IS NULL AND owner_org_id IS NOT NULL)
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_owner_user
+  ON api_keys (owner_user_id, created_at DESC)
+  WHERE owner_user_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_owner_org
+  ON api_keys (owner_org_id, created_at DESC)
+  WHERE owner_org_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_active_prefix
+  ON api_keys (key_prefix)
+  WHERE revoked_at IS NULL;

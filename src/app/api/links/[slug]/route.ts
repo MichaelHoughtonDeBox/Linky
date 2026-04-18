@@ -86,7 +86,7 @@ export async function PATCH(
   try {
     const { slug } = await context.params;
 
-    const subject = await requireAuthSubject();
+    const subject = await requireAuthSubject(request);
 
     const existing = await getLinkyRecordBySlug(slug);
     if (!existing) {
@@ -120,7 +120,10 @@ export async function PATCH(
     const updated = await patchLinkyRecord({
       slug,
       patch,
-      editedByClerkUserId: subject.userId,
+      // API-key-authenticated org subjects may not carry a human user id. We
+      // preserve the append-only history row anyway and leave the editor field
+      // null rather than inventing a Clerk identity.
+      editedByClerkUserId: subject.type === "user" ? subject.userId : subject.userId,
     });
 
     if (!updated) {
@@ -151,13 +154,13 @@ export async function PATCH(
 // ---------------------------------------------------------------------------
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   context: RouteContext,
 ): Promise<Response> {
   try {
     const { slug } = await context.params;
 
-    const subject = await requireAuthSubject();
+    const subject = await requireAuthSubject(request);
 
     const existing = await getLinkyRecordBySlug(slug);
     if (!existing) {

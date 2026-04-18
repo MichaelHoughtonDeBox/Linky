@@ -22,6 +22,29 @@ export type CreateLinkyResult = {
   claimExpiresAt?: string;
   warning?: string;
   resolutionPolicy?: ResolutionPolicy;
+};
+
+export type UpdateLinkyOptions = {
+  slug: string;
+  baseUrl?: string;
+  title?: string | null;
+  description?: string | null;
+  urls?: string[];
+  urlMetadata?: UrlMetadata[];
+  resolutionPolicy?: ResolutionPolicy | null;
+  client?: string;
+  apiKey?: string;
+  fetchImpl?: typeof fetch;
+};
+
+export type UpdateLinkyResult = {
+  slug: string;
+  urls: string[];
+  urlMetadata: UrlMetadata[];
+  title: string | null;
+  description: string | null;
+  resolutionPolicy?: ResolutionPolicy;
+  updatedAt?: string;
 };`;
 
 const SDK_BASIC = `const { createLinky } = require("@linky/linky");
@@ -57,6 +80,24 @@ await createLinky({
   },
 });`;
 
+const SDK_UPDATE = `const { updateLinky } = require("@linky/linky");
+
+await updateLinky({
+  slug: "abc123",
+  apiKey: process.env.LINKY_API_KEY,
+  title: "Release bundle v2",
+  resolutionPolicy: {
+    version: 1,
+    rules: [
+      {
+        name: "Engineering team",
+        when: { op: "endsWith", field: "emailDomain", value: "acme.com" },
+        tabs: [{ url: "https://linear.app/acme/my-issues" }],
+      },
+    ],
+  },
+});`;
+
 export default function DocsSdkPage() {
   return (
     <>
@@ -65,9 +106,9 @@ export default function DocsSdkPage() {
         SDK reference
       </h1>
       <p className="docs-lede">
-        <code>@linky/linky</code> exports one function:{" "}
-        <code>createLinky</code>. Same surface as the CLI, minus the TTY
-        affordances.
+        <code>@linky/linky</code> exports two functions:{" "}
+        <code>createLinky</code> and <code>updateLinky</code>. Same HTTP
+        surface as the CLI, minus the TTY affordances.
       </p>
 
       <section className="docs-section">
@@ -185,6 +226,18 @@ export default function DocsSdkPage() {
               </tr>
               <tr>
                 <td>
+                  <code>apiKey</code>
+                </td>
+                <td>string</td>
+                <td>
+                  Required for <code>updateLinky()</code>. Bearer token created
+                  from the dashboard&apos;s API-keys page. User-scoped keys edit
+                  personal launch bundles; org-scoped keys edit team-owned
+                  bundles.
+                </td>
+              </tr>
+              <tr>
+                <td>
                   <code>metadata</code>
                 </td>
                 <td>Record&lt;string, unknown&gt;</td>
@@ -208,6 +261,11 @@ export default function DocsSdkPage() {
           parsed form (with minted rule ids) so you don&apos;t need a second
           fetch.
         </p>
+        <p className="mt-3">
+          <code>updateLinky()</code> returns the updated Linky shape (slug,
+          urls, metadata, title, description, policy, updatedAt). Policy clears
+          use <code>resolutionPolicy: null</code>.
+        </p>
       </section>
 
       <section className="docs-section">
@@ -221,6 +279,13 @@ export default function DocsSdkPage() {
         <p className="terminal-label">With a policy</p>
         <pre className="docs-json">
           <code>{SDK_POLICY}</code>
+        </pre>
+      </section>
+
+      <section className="docs-section">
+        <p className="terminal-label">Authenticated update</p>
+        <pre className="docs-json">
+          <code>{SDK_UPDATE}</code>
         </pre>
       </section>
 

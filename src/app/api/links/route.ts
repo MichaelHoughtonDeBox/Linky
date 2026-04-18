@@ -217,7 +217,7 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     const payload = parseCreateLinkyPayload(rawPayload);
 
-    const subject = await getAuthSubject();
+    const subject = await getAuthSubject(request);
     const limits = getLimits(subject);
 
     if (payload.urls.length > limits.maxUrlsPerLinky) {

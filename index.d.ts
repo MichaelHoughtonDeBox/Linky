@@ -99,8 +99,35 @@ export type CreateLinkyResult = {
   resolutionPolicy?: ResolutionPolicy;
 };
 
+export type UpdateLinkyOptions = {
+  slug: string;
+  baseUrl?: string;
+  title?: string | null;
+  description?: string | null;
+  urls?: string[];
+  urlMetadata?: UrlMetadata[];
+  resolutionPolicy?: ResolutionPolicy | null;
+  client?: string;
+  apiKey?: string;
+  fetchImpl?: typeof fetch;
+};
+
+export type UpdateLinkyResult = {
+  slug: string;
+  urls: string[];
+  urlMetadata: UrlMetadata[];
+  title: string | null;
+  description: string | null;
+  updatedAt?: string;
+  resolutionPolicy?: ResolutionPolicy;
+};
+
 export const DEFAULT_BASE_URL: string;
 
 export function createLinky(
   options: CreateLinkyOptions,
 ): Promise<CreateLinkyResult>;
+
+export function updateLinky(
+  options: UpdateLinkyOptions,
+): Promise<UpdateLinkyResult>;

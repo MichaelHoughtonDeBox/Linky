@@ -305,6 +305,10 @@ The package ships a `linky` command.
 
 ```bash
 linky create <url1> <url2> [url3] ... [options]
+linky update <slug> [options]
+linky auth set-key <apiKey>
+linky auth clear
+linky auth whoami [options]
 ```
 
 Options:
@@ -317,6 +321,23 @@ Options:
 - `--client <id>` client attribution sent as `Linky-Client: <tool>/<version>`
 - `--json` machine-readable output
 
+Update options:
+- `--title <string>` replace title
+- `--description <string>` replace description
+- `--description-null` clear description
+- `--url <url>` replace the Linky's URL list (repeat to preserve order)
+- `--urls-file <file>` replace URLs from a newline-delimited file
+- `--policy <file>` replace `resolutionPolicy` from a JSON file
+- `--clear-policy` clear `resolutionPolicy`
+- `--api-key <key>` override the configured API key for this call
+- `--client <id>` client attribution sent as `Linky-Client: <tool>/<version>`
+- `--json` machine-readable output
+
+Auth precedence for `linky update` and `linky auth whoami`:
+1. `--api-key`
+2. `LINKY_API_KEY`
+3. stored key from `linky auth set-key`
+
 Examples:
 
 ```bash
@@ -324,11 +345,29 @@ linky create https://example.com https://example.org
 linky create https://example.com --email alice@example.com --title "Standup bundle"
 linky create https://acme.com/docs --policy ./acme-team.policy.json
 echo "https://example.com" | linky create --stdin --json
+linky auth set-key lkyu_deadbeef.secret
+linky auth whoami
+linky update abc123 --title "Standup bundle v2"
+linky update abc123 --policy ./acme-team.policy.json
+linky update abc123 --clear-policy
 ```
 
 When `--email` is used on an anonymous call, the CLI prints a `Claim this
 Linky by signing in:` section with a claim URL. Clicking it (or sharing
 it with the named recipient) lets them bind ownership to their account.
+
+### API keys for automation
+
+Create API keys from the dashboard at `/dashboard/api-keys`. Linky supports
+both:
+
+- **personal keys** — act as your user subject
+- **team keys** — act as the active organization only
+
+Team keys do **not** inherit the issuing human's personal access. They can edit
+org-owned Linkies, but they cannot reach user-owned Linkies. Raw API keys are
+shown once and cannot be recovered later; revoke them from the same dashboard
+page if they leak or are no longer needed.
 
 ## Package API
 
@@ -361,6 +400,22 @@ const result = await createLinky({
 console.log(result.url);                // always present
 console.log(result.claimUrl);           // present only for anonymous creates
 console.log(result.resolutionPolicy);   // present only when a policy was attached
+```
+
+Authenticated update:
+
+```js
+const { updateLinky } = require("@linky/linky");
+
+const result = await updateLinky({
+  slug: "abc123",
+  apiKey: process.env.LINKY_API_KEY,
+  title: "Release review v2",
+  resolutionPolicy: null, // clear the policy
+});
+
+console.log(result.linky.slug);
+console.log(result.linky.updatedAt);
 ```
 
 ## Claim Flow (agent → human handoff)

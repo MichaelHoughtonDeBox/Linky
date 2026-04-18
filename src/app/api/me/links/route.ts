@@ -92,7 +92,7 @@ function parsePaginationParams(request: NextRequest): {
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
-    const subject = await requireAuthSubject();
+    const subject = await requireAuthSubject(request);
     const { limit, offset } = parsePaginationParams(request);
 
     const records =

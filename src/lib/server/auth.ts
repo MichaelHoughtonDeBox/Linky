@@ -2,6 +2,8 @@ import "server-only";
 
 import { auth } from "@clerk/nextjs/server";
 
+import { authenticateApiKey } from "./api-keys";
+
 // ---------------------------------------------------------------------------
 // Authenticated subject model.
 //
@@ -22,7 +24,10 @@ import { auth } from "@clerk/nextjs/server";
 export type OrgSubject = {
   type: "org";
   orgId: string;
-  userId: string;
+  // Clerk-backed org context carries the active human user id. Org-scoped API
+  // keys deliberately do NOT: they authenticate as the org only, so they
+  // cannot accidentally bleed into user-owned resources.
+  userId: string | null;
   role: string | null;
 };
 
@@ -38,14 +43,18 @@ export type AnonymousSubject = {
 export type AuthenticatedSubject = OrgSubject | UserSubject;
 export type AuthSubject = AuthenticatedSubject | AnonymousSubject;
 
-/**
- * Resolve the active subject for the current request.
- *
- * Safe to call from any server context (Server Components, Route Handlers,
- * Server Actions). Returns an anonymous subject if no Clerk session is
- * present — callers that require auth should guard explicitly.
- */
-export async function getAuthSubject(): Promise<AuthSubject> {
+function parseBearerToken(request: Request): string | null {
+  const raw = request.headers.get("authorization");
+  if (!raw) return null;
+
+  const match = /^\s*Bearer\s+(.+?)\s*$/i.exec(raw);
+  if (!match) return null;
+
+  const token = match[1]?.trim();
+  return token && token.length > 0 ? token : null;
+}
+
+async function getSessionAuthSubject(): Promise<AuthSubject> {
   const session = await auth();
 
   if (!session.userId) {
@@ -70,18 +79,63 @@ export async function getAuthSubject(): Promise<AuthSubject> {
   };
 }
 
+async function getRequestAuthSubject(request: Request): Promise<AuthSubject> {
+  const bearerToken = parseBearerToken(request);
+  if (bearerToken) {
+    const apiKeySubject = await authenticateApiKey(bearerToken);
+    if (!apiKeySubject) {
+      throw new AuthRequiredError("Invalid API key.");
+    }
+    return apiKeySubject;
+  }
+
+  return getSessionAuthSubject();
+}
+
+/**
+ * Resolve the active subject for the current request.
+ *
+ * Safe to call from any server context (Server Components, Route Handlers,
+ * Server Actions). Returns an anonymous subject if no Clerk session is
+ * present — callers that require auth should guard explicitly.
+ */
+export async function getAuthSubject(request?: Request): Promise<AuthSubject> {
+  if (request) {
+    return getRequestAuthSubject(request);
+  }
+
+  return getSessionAuthSubject();
+}
+
 /**
  * Resolve the subject or throw if unauthenticated. Convenience for routes
  * that must have a signed-in user. Callers still need to check ownership.
  */
-export async function requireAuthSubject(): Promise<AuthenticatedSubject> {
-  const subject = await getAuthSubject();
+export async function requireAuthSubject(
+  request?: Request,
+): Promise<AuthenticatedSubject> {
+  const subject = await getAuthSubject(request);
 
   if (subject.type === "anonymous") {
     throw new AuthRequiredError();
   }
 
   return subject;
+}
+
+/**
+ * Resolve the signed-in Clerk user id from the browser session only.
+ *
+ * Claim consumption is intentionally human-mediated: API keys may edit owned
+ * Linkies, but they must never claim anonymous ones. This helper preserves
+ * that boundary without forcing callers to reason about bearer-auth subjects.
+ */
+export async function requireSessionUserId(): Promise<string> {
+  const session = await auth();
+  if (!session.userId) {
+    throw new AuthRequiredError();
+  }
+  return session.userId;
 }
 
 export class AuthRequiredError extends Error {
@@ -141,7 +195,9 @@ export function canEditLinky(
   if (ownership.ownerUserId) {
     return (
       (subject.type === "user" && subject.userId === ownership.ownerUserId) ||
-      (subject.type === "org" && subject.userId === ownership.ownerUserId)
+      (subject.type === "org" &&
+        subject.userId !== null &&
+        subject.userId === ownership.ownerUserId)
     );
   }
 

@@ -64,12 +64,12 @@ function toVersionDto(version: LinkyVersionRecord) {
 // ---------------------------------------------------------------------------
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: RouteContext,
 ): Promise<Response> {
   try {
     const { slug } = await context.params;
-    const subject = await requireAuthSubject();
+    const subject = await requireAuthSubject(request);
 
     const existing = await getLinkyRecordBySlug(slug);
     if (!existing) {
