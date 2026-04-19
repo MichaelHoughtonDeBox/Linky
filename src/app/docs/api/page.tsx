@@ -97,6 +97,77 @@ const VERSIONS_RES = `{
   ]
 }`;
 
+const INSIGHTS_REQ = `GET /api/links/:slug/insights?range=30d
+# any role with view access; read-only — no request body
+
+# range accepts 7d, 30d (default), or 90d`;
+
+const INSIGHTS_RES = `{
+  "slug": "x8q2m4k",
+  "range": {
+    "from": "2026-03-19T00:00:00.000Z",
+    "to":   "2026-04-18T00:00:00.000Z"
+  },
+  "totals": {
+    "views": 412,
+    "uniqueViewerDays": 287,
+    "openAllClicks": 198,
+    "openAllRate": 0.481
+  },
+  "byRule": [
+    {
+      "ruleId": "01J...",
+      "ruleName": "Engineering team",
+      "views": 164,
+      "openAllClicks": 102,
+      "openAllRate": 0.622
+    },
+    {
+      "ruleId": null,
+      "ruleName": "Fallthrough",
+      "views": 186,
+      "openAllClicks": 56,
+      "openAllRate": 0.301
+    }
+  ],
+  "series": [
+    { "day": "2026-04-11", "views": 18, "openAllClicks": 9 },
+    { "day": "2026-04-12", "views": 22, "openAllClicks": 12 }
+  ]
+}`;
+
+const EVENTS_REQ = `POST /api/links/:slug/events
+content-type: application/json
+
+{
+  "kind": "open_all",
+  "matchedRuleId": "01J..."   # optional; pass null for fallthrough
+}`;
+
+const KEYS_POST_REQ = `POST /api/me/keys
+content-type: application/json
+# org subjects: admin role required
+
+{
+  "name": "release-bot",
+  "scopes": ["links:read"]    # optional; defaults to ["links:write"]
+}`;
+
+const KEYS_POST_RES = `{
+  "apiKey": {
+    "id": 42,
+    "name": "release-bot",
+    "scope": "user",
+    "scopes": ["links:read"],
+    "keyPrefix": "lkyu_a1b2c3d4",
+    "createdAt": "2026-04-18T12:00:00.000Z",
+    "lastUsedAt": null,
+    "revokedAt": null
+  },
+  "rawKey": "lkyu_a1b2c3d4.shown-once-cannot-be-recovered",
+  "warning": "Save this API key now — it is shown only once and cannot be recovered."
+}`;
+
 export default function DocsApiPage() {
   return (
     <>
@@ -131,12 +202,18 @@ export default function DocsApiPage() {
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">PATCH /api/links/:slug (owner-only)</p>
+        <p className="terminal-label">PATCH /api/links/:slug (editor+)</p>
         <p>
           Edit a Linky. All fields optional; at least one required. Every
           edit — including policy edits — is saved as a new version, so
           previous states are always recoverable via{" "}
           <code>GET /api/links/:slug/versions</code>.
+        </p>
+        <p>
+          On org-owned bundles, editor and admin roles can PATCH; viewer
+          cannot. Bearer callers need the <code>links:write</code> scope.
+          See <Link href="/docs/access-control">Access control</Link> for
+          the full matrix.
         </p>
         <pre className="docs-json">
           <code>{PATCH_LINKS_REQ}</code>
@@ -149,20 +226,26 @@ export default function DocsApiPage() {
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">DELETE /api/links/:slug (owner-only)</p>
+        <p className="terminal-label">DELETE /api/links/:slug (admin-only)</p>
         <p>
           Soft-deletes the Linky. The public <code>/l/:slug</code> launcher
           returns 404 afterwards; the version history stays intact so you
           can audit what the bundle pointed at.
         </p>
+        <p>
+          On org-owned bundles, only the admin role can delete. Editors
+          cannot. Bearer callers need the <code>links:write</code> scope
+          plus admin role — an editor-scoped key never deletes.
+        </p>
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">GET /api/me/links (signed-in)</p>
+        <p className="terminal-label">GET /api/me/links (signed-in, view+)</p>
         <p>
           Paginated list of the active subject&apos;s launch bundles. Query
           params: <code>limit</code> (default 20, max 100),{" "}
-          <code>offset</code> (default 0).
+          <code>offset</code> (default 0). Bearer callers need the{" "}
+          <code>links:read</code> scope.
         </p>
         <pre className="docs-json">
           <code>{ME_LINKS_RES}</code>
@@ -170,14 +253,116 @@ export default function DocsApiPage() {
       </section>
 
       <section className="docs-section">
-        <p className="terminal-label">GET /api/links/:slug/versions (owner-only)</p>
+        <p className="terminal-label">GET /api/links/:slug/versions (view+)</p>
         <p>
           Every edit is kept forever as a new version. This endpoint returns
-          every prior snapshot for the Linky, newest first.
+          every prior snapshot for the Linky, newest first. Any role with
+          view access can read this — editors don&apos;t need edit rights
+          to see what changed.
         </p>
         <pre className="docs-json">
           <code>{VERSIONS_RES}</code>
         </pre>
+      </section>
+
+      <section id="insights" className="docs-section">
+        <p className="terminal-label">GET /api/links/:slug/insights (view+)</p>
+        <p>
+          Owner-side analytics. Returns view + Open All counts, a daily
+          series, and a per-rule breakdown so you can see whether your
+          personalized Linky is reaching the right audience. Any role
+          with view access can read — viewer / editor / admin all get the
+          numbers. Bearer callers need the <code>links:read</code> scope.
+        </p>
+        <pre className="docs-json">
+          <code>{INSIGHTS_REQ}</code>
+        </pre>
+        <pre className="docs-json">
+          <code>{INSIGHTS_RES}</code>
+        </pre>
+        <ul>
+          <li>
+            <code>range</code> accepts <code>7d</code>, <code>30d</code>{" "}
+            (default), or <code>90d</code>. Anything else silently
+            clamps to the default.
+          </li>
+          <li>
+            <code>uniqueViewerDays</code> counts distinct per-day viewer
+            hashes. Cross-day identity is not recoverable by design — the
+            daily salt rotates.
+          </li>
+          <li>
+            <code>byRule</code> labels resolve from the current policy.
+            A rule you deleted yesterday renders as{" "}
+            <code>&quot;(removed rule)&quot;</code> so history survives
+            policy edits. Fallthrough (no rule matched) is the bucket
+            with <code>ruleId: null</code>.
+          </li>
+          <li>
+            No viewer identity leaves the table. No destination-tab
+            pings. See{" "}
+            <Link href="/docs/access-control">Access control</Link> for
+            the full trust posture.
+          </li>
+        </ul>
+      </section>
+
+      <section id="events" className="docs-section">
+        <p className="terminal-label">POST /api/links/:slug/events (public)</p>
+        <p>
+          The launcher page fires this endpoint for every Open All click.
+          You will rarely call it directly — documenting it here because
+          it shows up in browser network traces and in rate-limit budgets.
+          Returns <code>204 No Content</code> on every non-exceptional
+          outcome (including unknown slugs — we don&apos;t leak existence
+          through this route).
+        </p>
+        <pre className="docs-json">
+          <code>{EVENTS_REQ}</code>
+        </pre>
+        <p>
+          Rate-limited per IP, same bucket as{" "}
+          <code>POST /api/links</code>. Best-effort: a DB outage drops the
+          event and returns 204 anyway — the launcher&apos;s real job
+          (opening tabs) has already happened by the time the ping lands.
+        </p>
+      </section>
+
+      <section id="scoped-keys" className="docs-section">
+        <p className="terminal-label">POST /api/me/keys — scoped API keys (admin)</p>
+        <p>
+          Mint an API key for automation. Org admins mint team keys;
+          individual users mint personal keys. Scope is locked at mint —
+          to change it, revoke and re-issue. Three presets:
+        </p>
+        <ul>
+          <li>
+            <code>links:read</code> — list, view, read insights. Safe
+            for LLM context.
+          </li>
+          <li>
+            <code>links:write</code> (default) — everything read can do,
+            plus PATCH. Cannot DELETE — that needs admin role.
+          </li>
+          <li>
+            <code>keys:admin</code> — everything above, plus minting and
+            revoking other keys. Treat like a root credential.
+          </li>
+        </ul>
+        <pre className="docs-json">
+          <code>{KEYS_POST_REQ}</code>
+        </pre>
+        <pre className="docs-json">
+          <code>{KEYS_POST_RES}</code>
+        </pre>
+        <p>
+          The <code>rawKey</code> is returned once. Paste it into your
+          secret store immediately — no endpoint reveals it again. Call
+          this endpoint with <code>GET</code> to list keys (never returns
+          raw secrets) or <code>DELETE ?id=&lt;keyId&gt;</code> to revoke.
+          On org subjects, all three methods require admin role + the{" "}
+          <code>keys:admin</code> scope for bearer callers.
+        </p>
       </section>
 
       <section className="docs-section">
@@ -236,7 +421,12 @@ export default function DocsApiPage() {
                 <td>
                   <code>FORBIDDEN</code>
                 </td>
-                <td>Signed in but not the owner of the resource.</td>
+                <td>
+                  Not the owner, wrong role (e.g. viewer trying to
+                  PATCH, editor trying to DELETE), or missing scope on
+                  the API key. The error message names the missing
+                  dimension.
+                </td>
               </tr>
               <tr>
                 <td>404</td>
