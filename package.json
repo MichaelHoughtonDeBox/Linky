@@ -17,6 +17,7 @@
   },
   "files": [
     "cli/index.js",
+    "cli/mcp.mjs",
     "sdk/client.js",
     "sdk/client.d.ts",
     "sdk/index.js",

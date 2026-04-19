@@ -32,6 +32,8 @@ Usage:
   linky auth set-key <apiKey>
   linky auth clear
   linky auth whoami [options]
+  linky mcp                             Start the stdio MCP bridge
+                                        (point agent configs at this)
 
 Create options:
   --base-url <url>       Linky app base URL (default: ${DEFAULT_BASE_URL})
@@ -640,6 +642,30 @@ async function handleUpdate(argv) {
   printUpdateSummary(result);
 }
 
+// Sprint 2.8 Chunk B: stdio MCP bridge. The bridge lives in `cli/mcp.mjs`
+// as an ESM module (the @modelcontextprotocol/sdk is ESM-only). We
+// dynamic-import it from this CJS entry so the user only has one bin
+// (`linky`). The bridge's `main()` kicks off at import time and attaches
+// to the current process's stdin/stdout — no subprocess, no IPC plumbing.
+//
+// NOTE: `--help` / `-h` short-circuits to the bridge's own help output
+// because the config block it prints is much more useful than the
+// top-level CLI help.
+async function handleMcp(argv) {
+  // The bridge reads argv itself for `--help`. Pass through unchanged
+  // by mutating process.argv so the ESM module sees the same flags.
+  // We clone because other handlers may still inspect process.argv
+  // after this call (they don't today, but let's not force a future
+  // maintainer to debug that).
+  const originalArgv = process.argv;
+  process.argv = [originalArgv[0], originalArgv[1], ...argv];
+  try {
+    await import("./mcp.mjs");
+  } finally {
+    process.argv = originalArgv;
+  }
+}
+
 async function handleAuth(argv) {
   const parsed = parseAuthArgs(argv);
   if (parsed.showHelp) {
@@ -708,6 +734,11 @@ async function main() {
 
     if (first === "auth") {
       await handleAuth(argv);
+      return;
+    }
+
+    if (first === "mcp") {
+      await handleMcp(argv);
       return;
     }
 
