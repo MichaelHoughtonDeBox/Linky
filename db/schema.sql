@@ -182,3 +182,27 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_owner_org
 CREATE INDEX IF NOT EXISTS idx_api_keys_active_prefix
   ON api_keys (key_prefix)
   WHERE revoked_at IS NULL;
+
+-- ---------------------------------------------------------------------------
+-- Launcher events. Owner-side analytics (Sprint 2.7 Chunk A).
+-- One row per /l/[slug] render ('view') and per Open All click ('open_all').
+-- viewer_hash_day is sha256(subject || YYYY-MM-DD || LINKY_DAILY_SALT) so
+-- "unique viewers per day" is answerable without persisting anything
+-- re-identifiable. No raw IP, no UA, no email, no Clerk id stored.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS launcher_events (
+  id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  linky_id          INTEGER NOT NULL REFERENCES linkies(id) ON DELETE CASCADE,
+  kind              TEXT NOT NULL CHECK (kind IN ('view', 'open_all')),
+  occurred_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Dangling rule ids are expected: if the owner deletes a rule after the
+  -- event was written, the id survives. The UI renders unknown ids as
+  -- "(removed rule)". No FK — the policy lives in a JSONB column.
+  matched_rule_id   TEXT,
+  viewer_state      TEXT NOT NULL CHECK (viewer_state IN ('anonymous', 'signed_in')),
+  viewer_hash_day   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_launcher_events_linky_time
+  ON launcher_events (linky_id, occurred_at DESC);
