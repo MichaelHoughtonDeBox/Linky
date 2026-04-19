@@ -663,7 +663,7 @@ several of these are different by design.
 - [x] **Identity-aware URL resolution** — same Linky, different tabs per viewer. Sprint 2.
 - [x] **Policy at create time via CLI / SDK / API** (`--policy` flag, `createLinky({ resolutionPolicy })`, `POST /api/links` accepts `resolutionPolicy`) — Sprint 2.5.
 - [ ] **`linky update <slug>` CLI command** — post-create policy editing from the terminal. Sprint 2.6.
-- [ ] **Analytics + access control** — team plan foundation.
+- [ ] **Analytics + access control** — team plan foundation. Sprint 2.7 plan lives at [`.agents/sprint-2.7-plan.md`](./.agents/sprint-2.7-plan.md) — launcher-event instrumentation, role-aware ownership (`viewer` / `editor` / `admin` derived from `memberships.role`), and scoped API keys (`links:read` / `links:write` / `keys:admin`).
 - [ ] **First-class MCP server + "linky session" convention** — other frameworks can adopt; publish the spec.
 - [ ] **Cursor / Claude / ChatGPT-native skills** — emit a Linky at the end of every task.
 - [ ] **Browser extension** — tab-group capture and restore.
