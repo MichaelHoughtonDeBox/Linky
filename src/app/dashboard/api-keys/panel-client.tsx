@@ -10,6 +10,7 @@ type ApiKeyItem = {
   scope: "user" | "org";
   scopes: ApiKeyPermission[];
   keyPrefix: string;
+  rateLimitPerHour: number;
   createdAt: string;
   createdAtLabel: string;
   lastUsedAt: string | null;
@@ -29,6 +30,7 @@ type ApiKeyDto = {
   scope: "user" | "org";
   scopes: ApiKeyPermission[];
   keyPrefix: string;
+  rateLimitPerHour: number;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -93,16 +95,37 @@ function withLabels(item: ApiKeyDto): ApiKeyItem {
   return {
     ...item,
     scopes: item.scopes ?? ["links:write"],
+    // Server populates this today; guard against a legacy payload
+    // (e.g. during a hot deploy) so the UI renders something coherent
+    // instead of `undefined`.
+    rateLimitPerHour:
+      typeof item.rateLimitPerHour === "number"
+        ? item.rateLimitPerHour
+        : DEFAULT_RATE_LIMIT,
     createdAtLabel: formatRelative(item.createdAt),
     lastUsedAtLabel: item.lastUsedAt ? formatRelative(item.lastUsedAt) : null,
     revokedAtLabel: item.revokedAt ? formatRelative(item.revokedAt) : null,
   };
 }
 
+const DEFAULT_RATE_LIMIT = 1000;
+const MAX_RATE_LIMIT = 100_000;
+
+function formatRateLimit(rateLimitPerHour: number): string {
+  if (rateLimitPerHour === 0) return "Unlimited";
+  return `${rateLimitPerHour.toLocaleString()}/hr`;
+}
+
 export function ApiKeysPanel({ subjectType, initialKeys }: Props) {
   const [keys, setKeys] = useState<ApiKeyItem[]>(initialKeys);
   const [name, setName] = useState("");
   const [preset, setPreset] = useState<ScopePreset>("write");
+  // Sprint 2.8 Chunk D: hourly quota input. Stored as a string so the
+  // user can clear the field mid-edit without bouncing back to the
+  // default. Coerced at submit time; empty string → default.
+  const [rateLimitInput, setRateLimitInput] = useState<string>(
+    String(DEFAULT_RATE_LIMIT),
+  );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
@@ -125,6 +148,19 @@ export function ApiKeysPanel({ subjectType, initialKeys }: Props) {
     setRevealedKey(null);
     setRevealedWarning(null);
 
+    const trimmedRateLimit = rateLimitInput.trim();
+    let rateLimitPerHour: number = DEFAULT_RATE_LIMIT;
+    if (trimmedRateLimit.length > 0) {
+      const parsed = Number.parseInt(trimmedRateLimit, 10);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_RATE_LIMIT) {
+        setError(
+          `Rate limit must be an integer between 0 and ${MAX_RATE_LIMIT.toLocaleString()}.`,
+        );
+        return;
+      }
+      rateLimitPerHour = parsed;
+    }
+
     startTransition(async () => {
       try {
         const response = await fetch("/api/me/keys", {
@@ -133,6 +169,7 @@ export function ApiKeysPanel({ subjectType, initialKeys }: Props) {
           body: JSON.stringify({
             name,
             scopes: SCOPE_PRESETS[preset].scopes,
+            rateLimitPerHour,
           }),
         });
 
@@ -157,6 +194,7 @@ export function ApiKeysPanel({ subjectType, initialKeys }: Props) {
           `${subjectType === "org" ? "Team" : "Personal"} API key created.`,
         );
         setName("");
+        setRateLimitInput(String(DEFAULT_RATE_LIMIT));
       } catch {
         setError("Could not reach the Linky API. Check your connection and retry.");
       }
@@ -277,6 +315,29 @@ export function ApiKeysPanel({ subjectType, initialKeys }: Props) {
           </div>
         </fieldset>
 
+        {/* Sprint 2.8 Chunk D — per-key hourly rate limit. 0 disables
+            the cap for internal / admin keys; the default of 1000/hour
+            is generous enough that no legitimate workflow ever hits
+            it. Immutable after mint — to change, revoke + re-issue. */}
+        <fieldset className="space-y-2">
+          <legend className="terminal-label mb-1">
+            Rate limit (per hour)
+          </legend>
+          <p className="terminal-muted mb-2 text-xs sm:text-sm">
+            Caps authenticated calls per hour from this key. Default 1000.
+            Enter 0 for unlimited (internal keys only). Locked at mint.
+          </p>
+          <input
+            type="number"
+            min={0}
+            max={MAX_RATE_LIMIT}
+            step={100}
+            value={rateLimitInput}
+            onChange={(event) => setRateLimitInput(event.target.value)}
+            className="terminal-input max-w-[12rem] text-sm sm:text-base"
+          />
+        </fieldset>
+
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
         {success ? <p className="text-sm text-green-700">{success}</p> : null}
 
@@ -315,6 +376,9 @@ export function ApiKeysPanel({ subjectType, initialKeys }: Props) {
                     </p>
                     <span className="terminal-chip text-xs">
                       {labelForScopes(item.scopes)}
+                    </span>
+                    <span className="terminal-chip text-xs">
+                      {formatRateLimit(item.rateLimitPerHour)}
                     </span>
                   </div>
                   <p className="terminal-muted mt-1 break-all text-xs sm:text-sm">

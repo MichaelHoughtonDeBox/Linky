@@ -75,7 +75,7 @@ vi.mock("@/lib/server/auth", async () => {
   };
 });
 
-import { LinkyError } from "@/lib/linky/errors";
+import { LinkyError, RateLimitError } from "@/lib/linky/errors";
 import {
   AuthRequiredError,
   ForbiddenError,
@@ -200,6 +200,15 @@ describe("toMcpError", () => {
     expect(err.code).toBe(MCP_ERROR_CODES.InternalError);
     // Message is intentionally generic — never leak internals to the client.
     expect(err.message).not.toContain("db down");
+  });
+
+  it("maps RateLimitError to code -32004 with retryAfterSeconds in data", () => {
+    const err = toMcpError(new RateLimitError(42));
+    expect(err.code).toBe(MCP_ERROR_CODES.RateLimited);
+    // McpError stores structured error data on `.data` — the SDK passes
+    // it through to the JSON-RPC envelope verbatim so harnesses can
+    // back off intelligently.
+    expect(err.data).toMatchObject({ retryAfterSeconds: 42 });
   });
 
   it("maps unknown errors to InternalError with a stable message", () => {
@@ -478,6 +487,22 @@ describe("POST /api/mcp", () => {
     expect(response.headers.get("www-authenticate")).toMatch(/Bearer/);
     const body = await response.json();
     expect(body).toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("returns 429 + Retry-After when authenticateBearerToken throws RateLimitError", async () => {
+    asMock(authenticateBearerToken).mockRejectedValueOnce(
+      new RateLimitError(30),
+    );
+    const response = await POST(
+      buildPostRequest({ bearer: "lkyu_x.y", body: {} }),
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("30");
+    const body = await response.json();
+    expect(body).toMatchObject({
+      code: "RATE_LIMITED",
+      retryAfterSeconds: 30,
+    });
   });
 
   it("returns 503 when LINKY_MCP_ENABLED=false", async () => {

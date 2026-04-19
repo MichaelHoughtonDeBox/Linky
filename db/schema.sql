@@ -167,6 +167,13 @@ CREATE TABLE IF NOT EXISTS api_keys (
   -- (write -> read, admin -> write + read) resolve at runtime; the
   -- stored array is exactly what the caller asked for.
   scopes                   JSONB NOT NULL DEFAULT '["links:write"]'::jsonb,
+  -- Sprint 2.8 Chunk D: per-key hourly rate limit. 1000 is the default
+  -- (generous for real workflows, catches runaway loops within seconds);
+  -- 0 means "no limit" for admin / internal keys that must never throttle.
+  -- Enforced by checkRateLimit() in src/lib/server/rate-limit.ts against a
+  -- per-key bucket (`apikey:${id}`) inside authenticateApiKey().
+  rate_limit_per_hour      INTEGER NOT NULL DEFAULT 1000
+    CHECK (rate_limit_per_hour >= 0),
   created_by_clerk_user_id TEXT REFERENCES users(clerk_user_id) ON DELETE SET NULL,
   last_used_at             TIMESTAMPTZ,
   revoked_at               TIMESTAMPTZ,

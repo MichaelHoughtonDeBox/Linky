@@ -185,6 +185,8 @@ export type ApiKeyDto = {
   scope: "user" | "org";
   scopes: ApiKeyPermission[];
   keyPrefix: string;
+  // Sprint 2.8 Chunk D: per-key hourly rate limit. 0 = unlimited.
+  rateLimitPerHour: number;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -247,6 +249,9 @@ export type GetInsightsInput = {
 export type CreateKeyInput = {
   name: string;
   scopes?: ApiKeyPermission[];
+  // Sprint 2.8 Chunk D: override the default 1000/hour quota. 0 = no
+  // limit (reserve for admin/internal use). Upper bound 100000.
+  rateLimitPerHour?: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -257,11 +262,17 @@ export class LinkyApiError extends Error {
   code: string;
   statusCode: number;
   details?: Record<string, unknown>;
+  // Present on HTTP 429 responses. Tells the caller how long to wait
+  // before retrying. Sourced from the server's `retryAfterSeconds` in
+  // the JSON body; falls back to the `Retry-After` header when the
+  // body is empty.
+  retryAfterSeconds?: number;
   constructor(init: {
     message: string;
     code?: string;
     statusCode?: number;
     details?: Record<string, unknown>;
+    retryAfterSeconds?: number;
   });
 }
 

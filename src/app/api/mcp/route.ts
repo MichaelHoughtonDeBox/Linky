@@ -6,6 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import packageJson from "../../../../package.json";
+import { RateLimitError, isRateLimitError } from "@/lib/linky/errors";
 import {
   authenticateBearerToken,
   AuthRequiredError,
@@ -91,6 +92,25 @@ function toAuthErrorResponse(error: AuthRequiredError): Response {
   );
 }
 
+// Sprint 2.8 Chunk D: bucket exhausted BEFORE the MCP envelope is
+// parsed. Return a proper HTTP 429 + `Retry-After` so the transport
+// layer backs off (the MCP SDK's client respects `Retry-After` on the
+// Streamable-HTTP connection) and so the stdio bridge's fetch
+// surfaces the same signal.
+function toRateLimitErrorResponse(error: RateLimitError): Response {
+  return Response.json(
+    {
+      error: error.message,
+      code: error.code,
+      retryAfterSeconds: error.retryAfterSeconds,
+    },
+    {
+      status: 429,
+      headers: { "Retry-After": String(error.retryAfterSeconds) },
+    },
+  );
+}
+
 export async function POST(request: Request): Promise<Response> {
   if (!isEnabled()) return killSwitchResponse();
 
@@ -101,6 +121,9 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof AuthRequiredError) {
       return toAuthErrorResponse(error);
+    }
+    if (isRateLimitError(error)) {
+      return toRateLimitErrorResponse(error);
     }
     throw error;
   }

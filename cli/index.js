@@ -751,8 +751,29 @@ async function main() {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const jsonMode = argv.includes("--json");
+    // Sprint 2.8 Chunk D: surface the retry signal prominently on 429.
+    // LinkyApiError from the SDK carries `retryAfterSeconds`; a CLI
+    // user who hits their per-key cap should see a concrete wait time
+    // instead of a generic error string.
+    const retryAfterSeconds =
+      error && typeof error === "object" && "retryAfterSeconds" in error
+        ? Number(error.retryAfterSeconds)
+        : undefined;
+
     if (jsonMode) {
-      console.error(JSON.stringify({ error: message }));
+      console.error(
+        JSON.stringify({
+          error: message,
+          retryAfterSeconds: retryAfterSeconds ?? undefined,
+        }),
+      );
+    } else if (retryAfterSeconds && retryAfterSeconds > 0) {
+      console.error(
+        colorize(
+          `Linky CLI error: ${message} Retry in ~${retryAfterSeconds}s.`,
+          ANSI.yellow,
+        ),
+      );
     } else {
       console.error(colorize(`Linky CLI error: ${message}`, ANSI.yellow));
     }

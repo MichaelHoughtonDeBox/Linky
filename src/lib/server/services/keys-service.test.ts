@@ -52,6 +52,7 @@ function keyRecord(overrides: Partial<ApiKeyRecord> = {}): ApiKeyRecord {
     scope: "user",
     scopes: ["links:write"],
     keyPrefix: "lkyu_deadbeef",
+    rateLimitPerHour: 1000,
     createdAt: "2026-01-01T00:00:00.000Z",
     lastUsedAt: null,
     revokedAt: null,

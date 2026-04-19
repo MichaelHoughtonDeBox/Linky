@@ -1,11 +1,8 @@
 import type { NextRequest } from "next/server";
 
-import { LinkyError, isLinkyError } from "@/lib/linky/errors";
-import {
-  AuthRequiredError,
-  ForbiddenError,
-  requireAuthSubject,
-} from "@/lib/server/auth";
+import { LinkyError } from "@/lib/linky/errors";
+import { requireAuthSubject } from "@/lib/server/auth";
+import { isKnownServerError, toErrorResponse } from "@/lib/server/http-errors";
 import {
   createKey,
   listKeys,
@@ -15,35 +12,13 @@ import {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type KnownError = LinkyError | AuthRequiredError | ForbiddenError;
-
-function isKnownError(error: unknown): error is KnownError {
-  return (
-    isLinkyError(error) ||
-    error instanceof AuthRequiredError ||
-    error instanceof ForbiddenError
-  );
-}
-
-function toErrorResponse(error: KnownError): Response {
-  const publicMessage =
-    isLinkyError(error) && error.code === "INTERNAL_ERROR"
-      ? "Linky is temporarily unavailable. Please try again shortly."
-      : error.message;
-
-  return Response.json(
-    { error: publicMessage, code: error.code },
-    { status: error.statusCode },
-  );
-}
-
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const subject = await requireAuthSubject(request);
     const dto = await listKeys(subject);
     return Response.json(dto);
   } catch (error) {
-    if (isKnownError(error)) return toErrorResponse(error);
+    if (isKnownServerError(error)) return toErrorResponse(error);
     return toErrorResponse(
       new LinkyError("Unexpected server error while listing API keys.", {
         code: "INTERNAL_ERROR",
@@ -79,12 +54,16 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
 
     const dto = await createKey(
-      { name: body.name, scopes: body.scopes },
+      {
+        name: body.name,
+        scopes: body.scopes,
+        rateLimitPerHour: body.rateLimitPerHour,
+      },
       subject,
     );
     return Response.json(dto, { status: 201 });
   } catch (error) {
-    if (isKnownError(error)) return toErrorResponse(error);
+    if (isKnownServerError(error)) return toErrorResponse(error);
     return toErrorResponse(
       new LinkyError("Unexpected server error while creating API key.", {
         code: "INTERNAL_ERROR",
@@ -110,7 +89,7 @@ export async function DELETE(request: NextRequest): Promise<Response> {
     const dto = await revokeKey({ id: apiKeyId }, subject);
     return Response.json(dto);
   } catch (error) {
-    if (isKnownError(error)) return toErrorResponse(error);
+    if (isKnownServerError(error)) return toErrorResponse(error);
     return toErrorResponse(
       new LinkyError("Unexpected server error while revoking API key.", {
         code: "INTERNAL_ERROR",

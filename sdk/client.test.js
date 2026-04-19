@@ -18,14 +18,18 @@ function okResponse(data = {}, init = {}) {
   return {
     ok: true,
     status: init.status ?? 200,
+    headers: { get: () => null },
     json: async () => data,
   };
 }
 
-function errResponse(data, status) {
+function errResponse(data, status, headers = {}) {
   return {
     ok: false,
     status,
+    headers: {
+      get: (name) => headers[name.toLowerCase()] ?? null,
+    },
     json: async () => data,
   };
 }
@@ -308,10 +312,62 @@ describe("LinkyClient error handling", () => {
     expect(caught.details).toEqual({ required: "links:write" });
   });
 
+  it("surfaces retryAfterSeconds from the JSON body on a 429", async () => {
+    const spy = makeFetchSpy(() =>
+      errResponse(
+        {
+          error: "Rate limit exceeded.",
+          code: "RATE_LIMITED",
+          retryAfterSeconds: 42,
+        },
+        429,
+        { "retry-after": "42" },
+      ),
+    );
+    const client = new LinkyClient({
+      baseUrl: "https://linky.example",
+      apiKey: "lkyu_abc.secret",
+      fetchImpl: spy,
+    });
+
+    let caught;
+    try {
+      await client.listLinkies();
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(LinkyApiError);
+    expect(caught.code).toBe("RATE_LIMITED");
+    expect(caught.statusCode).toBe(429);
+    expect(caught.retryAfterSeconds).toBe(42);
+  });
+
+  it("falls back to the Retry-After header when the body lacks retryAfterSeconds", async () => {
+    const spy = makeFetchSpy(() =>
+      errResponse(
+        { error: "Rate limit exceeded.", code: "RATE_LIMITED" },
+        429,
+        { "retry-after": "15" },
+      ),
+    );
+    const client = new LinkyClient({
+      baseUrl: "https://linky.example",
+      apiKey: "lkyu_abc.secret",
+      fetchImpl: spy,
+    });
+
+    try {
+      await client.listLinkies();
+    } catch (error) {
+      expect(error.retryAfterSeconds).toBe(15);
+    }
+  });
+
   it("falls back to a generic message when the server returns no body", async () => {
     const spy = makeFetchSpy(() => ({
       ok: false,
       status: 502,
+      headers: { get: () => null },
       json: async () => {
         throw new Error("not json");
       },
