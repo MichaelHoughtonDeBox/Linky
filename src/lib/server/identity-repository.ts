@@ -209,6 +209,67 @@ export async function getMembershipRole(
   return result.rows[0]?.role ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Org member listing (Sprint 2.7 Chunk E).
+//
+// Read-only: powers /dashboard/team. We deliberately do NOT mutate
+// memberships from the Linky dashboard — Clerk is the source of truth
+// and role changes go through their admin UI. Surfacing the list here
+// just saves a tab-switch when an admin wants to see who has what role.
+// ---------------------------------------------------------------------------
+
+export type OrgMemberRow = {
+  clerkUserId: string;
+  role: string;
+  displayName: string | null;
+  email: string | null;
+  createdAt: string;
+};
+
+export async function listOrgMembers(
+  clerkOrgId: string,
+): Promise<OrgMemberRow[]> {
+  const pool = getPgPool();
+  const result = await pool.query<{
+    clerk_user_id: string;
+    role: string;
+    display_name: string | null;
+    email: string | null;
+    created_at: Date | string;
+  }>(
+    `
+    SELECT
+      m.clerk_user_id,
+      m.role,
+      u.display_name,
+      u.email,
+      m.created_at
+    FROM memberships m
+    LEFT JOIN users u ON u.clerk_user_id = m.clerk_user_id
+    WHERE m.clerk_org_id = $1
+    ORDER BY
+      CASE m.role
+        WHEN 'org:admin' THEN 0
+        WHEN 'org:member' THEN 1
+        ELSE 2
+      END,
+      COALESCE(u.display_name, u.email, m.clerk_user_id) ASC
+    `,
+    [clerkOrgId],
+  );
+
+  return result.rows.map((row) => ({
+    clerkUserId: row.clerk_user_id,
+    role: row.role,
+    displayName: row.display_name,
+    email: row.email,
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : new Date(row.created_at).toISOString(),
+  }));
+}
+
 export async function getUserDisplayNameByClerkId(
   clerkUserId: string,
 ): Promise<{ displayName: string | null; email: string | null } | null> {

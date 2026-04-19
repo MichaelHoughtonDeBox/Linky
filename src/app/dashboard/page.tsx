@@ -154,6 +154,18 @@ export default async function DashboardPage() {
               Manage API keys
             </Link>
           ) : null}
+          {/*
+            Team link is admin-only on org workspaces. Personal subjects
+            have no team to view; they see neither link. Admins see both.
+          */}
+          {canManageKeys && subject.type === "org" ? (
+            <Link
+              href="/dashboard/team"
+              className="terminal-secondary px-3 py-1.5 text-xs sm:text-sm"
+            >
+              Team
+            </Link>
+          ) : null}
         </div>
       </header>
 
