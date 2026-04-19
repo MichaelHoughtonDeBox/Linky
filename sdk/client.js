@@ -34,12 +34,21 @@ const DEFAULT_BASE_URL =
 // structured error shape so callers can switch on `error.code` without
 // string-matching `error.message`.
 class LinkyApiError extends Error {
-  constructor({ message, code, statusCode, details }) {
+  constructor({ message, code, statusCode, details, retryAfterSeconds }) {
     super(message);
     this.name = "LinkyApiError";
     this.code = code || "UNKNOWN_ERROR";
     this.statusCode = typeof statusCode === "number" ? statusCode : 0;
     this.details = details;
+    // Sprint 2.8 Chunk D: present on 429 responses from a per-key
+    // bucket exhaustion. Callers can inspect this directly instead of
+    // parsing the `Retry-After` header themselves. `undefined` on any
+    // other failure so legacy consumers that only read `code` +
+    // `statusCode` keep working unchanged.
+    this.retryAfterSeconds =
+      typeof retryAfterSeconds === "number" && retryAfterSeconds > 0
+        ? retryAfterSeconds
+        : undefined;
   }
 }
 
@@ -135,6 +144,21 @@ class LinkyClient {
     const data = await safeJson(response);
 
     if (!response.ok) {
+      // Prefer the server-supplied `retryAfterSeconds` (the
+      // RateLimitError envelope from http-errors.ts) and fall back to
+      // the standard `Retry-After` header — either format is valid on
+      // the wire; consumers don't need to care which one the server
+      // picked.
+      const retryAfterHeader = response.headers?.get
+        ? response.headers.get("retry-after")
+        : null;
+      const retryAfterSeconds =
+        typeof data.retryAfterSeconds === "number"
+          ? data.retryAfterSeconds
+          : retryAfterHeader
+            ? Number.parseInt(retryAfterHeader, 10)
+            : undefined;
+
       throw new LinkyApiError({
         message:
           typeof data.error === "string"
@@ -143,6 +167,7 @@ class LinkyClient {
         code: typeof data.code === "string" ? data.code : undefined,
         statusCode: response.status,
         details: data.details,
+        retryAfterSeconds,
       });
     }
 
@@ -255,7 +280,11 @@ class LinkyClient {
     return this._request({
       path: "/api/me/keys",
       method: "POST",
-      body: { name: input.name, scopes: input.scopes },
+      body: {
+        name: input.name,
+        scopes: input.scopes,
+        rateLimitPerHour: input.rateLimitPerHour,
+      },
     });
   }
 

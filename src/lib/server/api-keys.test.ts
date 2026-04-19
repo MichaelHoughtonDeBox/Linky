@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEFAULT_RATE_LIMIT_PER_HOUR,
+  MAX_RATE_LIMIT_PER_HOUR,
   expandScopes,
   normalizeScopes,
+  parseRateLimitInput,
   parseScopesInput,
   type ApiKeyPermission,
 } from "./api-keys";
@@ -202,5 +205,48 @@ describe("requireScope", () => {
       expect(error).toBeInstanceOf(ForbiddenError);
       expect((error as ForbiddenError).message).toContain("links:write");
     }
+  });
+});
+
+// ============================================================================
+// Per-key rate limit input parser (Sprint 2.8 Chunk D).
+//
+// Pins the dashboard form's contract: accepts integer strings,
+// defaults when missing, rejects negatives / floats / overcaps /
+// garbage. The DB column constraint is the final guard, but we 400
+// loudly here so the user sees a clear message instead of a generic
+// "constraint violation" bubbling up.
+// ============================================================================
+
+describe("parseRateLimitInput", () => {
+  it("defaults to 1000 when no value is provided", () => {
+    expect(parseRateLimitInput(undefined)).toBe(DEFAULT_RATE_LIMIT_PER_HOUR);
+    expect(parseRateLimitInput(null)).toBe(DEFAULT_RATE_LIMIT_PER_HOUR);
+  });
+
+  it("accepts integer numbers and numeric strings", () => {
+    expect(parseRateLimitInput(250)).toBe(250);
+    expect(parseRateLimitInput("5000")).toBe(5000);
+    // 0 = disabled; must round-trip cleanly.
+    expect(parseRateLimitInput(0)).toBe(0);
+    expect(parseRateLimitInput("0")).toBe(0);
+  });
+
+  it("rejects negatives", () => {
+    expect(() => parseRateLimitInput(-1)).toThrow(/non-negative/);
+  });
+
+  it("rejects non-integer numbers", () => {
+    expect(() => parseRateLimitInput(1.5)).toThrow(/non-negative integer/);
+  });
+
+  it("rejects anything above MAX_RATE_LIMIT_PER_HOUR", () => {
+    expect(() =>
+      parseRateLimitInput(MAX_RATE_LIMIT_PER_HOUR + 1),
+    ).toThrow(/at most/);
+  });
+
+  it("rejects garbage strings", () => {
+    expect(() => parseRateLimitInput("many")).toThrow(/non-negative integer/);
   });
 });

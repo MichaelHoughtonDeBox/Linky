@@ -1,11 +1,8 @@
 import type { NextRequest } from "next/server";
 
-import { LinkyError, isLinkyError } from "@/lib/linky/errors";
-import {
-  AuthRequiredError,
-  ForbiddenError,
-  requireAuthSubject,
-} from "@/lib/server/auth";
+import { LinkyError } from "@/lib/linky/errors";
+import { requireAuthSubject } from "@/lib/server/auth";
+import { isKnownServerError, toErrorResponse } from "@/lib/server/http-errors";
 import {
   listLinkies,
   parseListPagination,
@@ -13,28 +10,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-type KnownError = LinkyError | AuthRequiredError | ForbiddenError;
-
-function isKnownError(error: unknown): error is KnownError {
-  return (
-    isLinkyError(error) ||
-    error instanceof AuthRequiredError ||
-    error instanceof ForbiddenError
-  );
-}
-
-function toErrorResponse(error: KnownError): Response {
-  const publicMessage =
-    isLinkyError(error) && error.code === "INTERNAL_ERROR"
-      ? "Linky is temporarily unavailable. Please try again shortly."
-      : error.message;
-
-  return Response.json(
-    { error: publicMessage, code: error.code },
-    { status: error.statusCode },
-  );
-}
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
@@ -47,7 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     const dto = await listLinkies(pagination, subject);
     return Response.json(dto);
   } catch (error) {
-    if (isKnownError(error)) return toErrorResponse(error);
+    if (isKnownServerError(error)) return toErrorResponse(error);
     return toErrorResponse(
       new LinkyError(
         "Unexpected server error while listing your Linky bundles.",

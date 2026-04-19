@@ -1,6 +1,11 @@
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
-import { LinkyError, isLinkyError } from "@/lib/linky/errors";
+import {
+  LinkyError,
+  RateLimitError,
+  isLinkyError,
+  isRateLimitError,
+} from "@/lib/linky/errors";
 import { AuthRequiredError, ForbiddenError } from "@/lib/server/auth";
 
 // ============================================================================
@@ -31,6 +36,7 @@ export const MCP_ERROR_CODES = {
   AuthRequired: -32001,
   Forbidden: -32002,
   NotFound: -32003,
+  RateLimited: -32004,
   InvalidParams: -32602,
   InternalError: -32603,
 } as const;
@@ -48,6 +54,18 @@ export function toMcpError(error: unknown): McpError {
 
   if (error instanceof ForbiddenError) {
     return new McpError(MCP_ERROR_CODES.Forbidden, error.message);
+  }
+
+  if (isRateLimitError(error)) {
+    // Surface `retryAfterSeconds` as the error's structured `data`
+    // payload. The SDK passes `data` through to the JSON-RPC envelope
+    // verbatim, so harnesses that want to back off intelligently can
+    // inspect `error.data.retryAfterSeconds` without parsing the
+    // human-readable message.
+    return new McpError(MCP_ERROR_CODES.RateLimited, error.message, {
+      retryAfterSeconds: error.retryAfterSeconds,
+      code: error.code,
+    });
   }
 
   if (isLinkyError(error)) {
@@ -86,4 +104,4 @@ export function isMcpError(value: unknown): value is McpError {
 }
 
 // Re-export so other modules don't import LinkyError just to classify.
-export { LinkyError };
+export { LinkyError, RateLimitError };

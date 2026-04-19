@@ -4,6 +4,7 @@ import {
   createApiKeyForSubject,
   listApiKeysForSubject,
   normalizeApiKeyName,
+  parseRateLimitInput,
   parseScopesInput,
   revokeApiKeyForSubject,
   type ApiKeyPermission,
@@ -35,6 +36,7 @@ export type ApiKeyDto = {
   scope: ApiKeyRecord["scope"];
   scopes: ApiKeyPermission[];
   keyPrefix: string;
+  rateLimitPerHour: number;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -64,6 +66,7 @@ export type WhoAmIResponse = KeyListResponse;
 export type CreateKeyInput = {
   name: unknown;
   scopes?: unknown;
+  rateLimitPerHour?: unknown;
 };
 
 export type RevokeKeyInput = {
@@ -77,6 +80,7 @@ function toApiKeyDto(record: ApiKeyRecord): ApiKeyDto {
     scope: record.scope,
     scopes: record.scopes,
     keyPrefix: record.keyPrefix,
+    rateLimitPerHour: record.rateLimitPerHour,
     createdAt: record.createdAt,
     lastUsedAt: record.lastUsedAt,
     revokedAt: record.revokedAt,
@@ -161,11 +165,16 @@ export async function createKey(
   // `{ name }` without touching scopes does not regress. Unknown scope
   // strings reject at this gate.
   const scopes = parseScopesInput(input.scopes);
+  // Sprint 2.8 Chunk D: optional per-key hourly rate limit. Defaults to
+  // 1000/hour; 0 disables. Upper bound 100k/hour enforced here so a
+  // stray dashboard form value can't mint a practically-unlimited key.
+  const rateLimitPerHour = parseRateLimitInput(input.rateLimitPerHour);
 
   const created = await createApiKeyForSubject({
     subject,
     name,
     scopes,
+    rateLimitPerHour,
     // Org API-key subjects may not carry a human creator id (service
     // automation minting a fresh org key). We preserve the `?? ""` fallback
     // from the pre-refactor route rather than inventing an identity.

@@ -1,12 +1,9 @@
 import type { NextRequest } from "next/server";
 
-import { LinkyError, isLinkyError } from "@/lib/linky/errors";
+import { LinkyError } from "@/lib/linky/errors";
 import { parsePatchLinkyPayload } from "@/lib/linky/schemas";
-import {
-  AuthRequiredError,
-  ForbiddenError,
-  requireAuthSubject,
-} from "@/lib/server/auth";
+import { requireAuthSubject } from "@/lib/server/auth";
+import { isKnownServerError, toErrorResponse } from "@/lib/server/http-errors";
 import {
   deleteLinky,
   updateLinky,
@@ -20,36 +17,6 @@ export const runtime = "nodejs";
 type RouteContext = {
   params: Promise<{ slug: string }>;
 };
-
-type KnownError = LinkyError | AuthRequiredError | ForbiddenError;
-
-function isKnownError(error: unknown): error is KnownError {
-  return (
-    isLinkyError(error) ||
-    error instanceof AuthRequiredError ||
-    error instanceof ForbiddenError
-  );
-}
-
-function toErrorResponse(error: KnownError): Response {
-  const statusCode = error.statusCode;
-  const isInternal = isLinkyError(error) && error.code === "INTERNAL_ERROR";
-  const publicMessage = isInternal
-    ? "Linky is temporarily unavailable. Please try again shortly."
-    : error.message;
-
-  return Response.json(
-    {
-      error: publicMessage,
-      code: error.code,
-      details:
-        process.env.NODE_ENV === "development" && isLinkyError(error)
-          ? error.details
-          : undefined,
-    },
-    { status: statusCode },
-  );
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -74,7 +41,7 @@ export async function PATCH(
 
     return Response.json({ linky: dto });
   } catch (error) {
-    if (isKnownError(error)) return toErrorResponse(error);
+    if (isKnownServerError(error)) return toErrorResponse(error);
     return toErrorResponse(
       new LinkyError("Unexpected server error while updating Linky.", {
         code: "INTERNAL_ERROR",
@@ -96,7 +63,7 @@ export async function DELETE(
 
     return Response.json({ ok: true });
   } catch (error) {
-    if (isKnownError(error)) return toErrorResponse(error);
+    if (isKnownServerError(error)) return toErrorResponse(error);
     return toErrorResponse(
       new LinkyError("Unexpected server error while deleting Linky.", {
         code: "INTERNAL_ERROR",

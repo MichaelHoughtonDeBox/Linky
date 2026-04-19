@@ -2,10 +2,11 @@ import "server-only";
 
 import { createHash, randomBytes } from "node:crypto";
 
-import { LinkyError } from "@/lib/linky/errors";
+import { LinkyError, RateLimitError } from "@/lib/linky/errors";
 
 import type { AuthenticatedSubject, OrgSubject, UserSubject } from "./auth";
 import { getPgPool } from "./postgres";
+import { checkRateLimit } from "./rate-limit";
 
 export type ApiKeyScope = "user" | "org";
 
@@ -28,6 +29,8 @@ export type ApiKeyRecord = {
   scope: ApiKeyScope;
   scopes: ApiKeyPermission[];
   keyPrefix: string;
+  // Sprint 2.8 Chunk D: per-key hourly quota. 0 = unlimited.
+  rateLimitPerHour: number;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -43,6 +46,7 @@ type DbApiKeyRow = {
   owner_org_id: string | null;
   name: string;
   scopes: unknown;
+  rate_limit_per_hour: number | string | null;
   created_by_clerk_user_id: string | null;
   created_at: Date | string;
   last_used_at: Date | string | null;
@@ -66,10 +70,59 @@ function mapDbRow(row: DbApiKeyRow): ApiKeyRecord {
     scope: row.owner_org_id ? "org" : "user",
     scopes: normalizeScopes(row.scopes),
     keyPrefix: row.key_prefix,
+    rateLimitPerHour: normalizeRateLimit(row.rate_limit_per_hour),
     createdAt: toIso(row.created_at) ?? new Date(0).toISOString(),
     lastUsedAt: toIso(row.last_used_at),
     revokedAt: toIso(row.revoked_at),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Rate limit helpers (Sprint 2.8 Chunk D).
+//
+// `DEFAULT_RATE_LIMIT_PER_HOUR` matches the migration's DEFAULT so
+// legacy rows (written before this sprint) fall into the same bucket
+// shape the new default mints. The DB constraint guarantees values are
+// non-negative, so `normalizeRateLimit` is only a shape guard against
+// NULLs returned by pg for legacy rows in tests that mock partial
+// DbApiKeyRow objects.
+//
+// `MAX_RATE_LIMIT_PER_HOUR` is a sanity cap on the API input — we don't
+// enforce it in the DB (no upper bound in the CHECK constraint) because
+// a future internal use case might want higher; but the public POST
+// surface rejects anything above it so a typo in the dashboard can't
+// mint a key with a 10M/hour limit.
+// ---------------------------------------------------------------------------
+
+export const DEFAULT_RATE_LIMIT_PER_HOUR = 1000;
+export const MAX_RATE_LIMIT_PER_HOUR = 100_000;
+
+function normalizeRateLimit(raw: number | string | null | undefined): number {
+  if (raw === null || raw === undefined) return DEFAULT_RATE_LIMIT_PER_HOUR;
+  const parsed = typeof raw === "number" ? raw : Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return DEFAULT_RATE_LIMIT_PER_HOUR;
+  }
+  return Math.floor(parsed);
+}
+
+export function parseRateLimitInput(raw: unknown): number {
+  if (raw === undefined || raw === null) return DEFAULT_RATE_LIMIT_PER_HOUR;
+
+  const parsed = typeof raw === "number" ? raw : Number.parseInt(String(raw), 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+    throw new LinkyError(
+      "`rateLimitPerHour` must be a non-negative integer.",
+      { code: "BAD_REQUEST", statusCode: 400 },
+    );
+  }
+  if (parsed > MAX_RATE_LIMIT_PER_HOUR) {
+    throw new LinkyError(
+      `\`rateLimitPerHour\` must be at most ${MAX_RATE_LIMIT_PER_HOUR}.`,
+      { code: "BAD_REQUEST", statusCode: 400 },
+    );
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -250,6 +303,7 @@ export async function listApiKeysForSubject(
       owner_org_id,
       name,
       scopes,
+      rate_limit_per_hour,
       created_by_clerk_user_id,
       created_at,
       last_used_at,
@@ -268,11 +322,14 @@ export async function createApiKeyForSubject(input: {
   subject: SubjectOwnedApiKey;
   name: string;
   scopes: ApiKeyPermission[];
+  rateLimitPerHour?: number;
   createdByClerkUserId: string;
 }): Promise<{ apiKey: ApiKeyRecord; rawKey: string }> {
   const pool = getPgPool();
   const scope: ApiKeyScope = input.subject.type === "org" ? "org" : "user";
   const minted = mintApiKey(scope);
+  const rateLimitPerHour =
+    input.rateLimitPerHour ?? DEFAULT_RATE_LIMIT_PER_HOUR;
 
   const result = await pool.query<DbApiKeyRow>(
     `
@@ -283,9 +340,10 @@ export async function createApiKeyForSubject(input: {
       owner_org_id,
       name,
       scopes,
+      rate_limit_per_hour,
       created_by_clerk_user_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
+    VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
     RETURNING
       id,
       key_prefix,
@@ -294,6 +352,7 @@ export async function createApiKeyForSubject(input: {
       owner_org_id,
       name,
       scopes,
+      rate_limit_per_hour,
       created_by_clerk_user_id,
       created_at,
       last_used_at,
@@ -306,6 +365,7 @@ export async function createApiKeyForSubject(input: {
       input.subject.type === "org" ? input.subject.orgId : null,
       input.name,
       JSON.stringify(input.scopes),
+      rateLimitPerHour,
       input.createdByClerkUserId,
     ],
   );
@@ -337,6 +397,7 @@ export async function revokeApiKeyForSubject(input: {
       owner_org_id,
       name,
       scopes,
+      rate_limit_per_hour,
       created_by_clerk_user_id,
       created_at,
       last_used_at,
@@ -371,6 +432,7 @@ export async function authenticateApiKey(
       owner_org_id,
       name,
       scopes,
+      rate_limit_per_hour,
       created_by_clerk_user_id,
       created_at,
       last_used_at,
@@ -383,6 +445,30 @@ export async function authenticateApiKey(
 
   const row = result.rows[0];
   const scopes = normalizeScopes(row.scopes);
+  const rateLimitPerHour = normalizeRateLimit(row.rate_limit_per_hour);
+
+  // Sprint 2.8 Chunk D: consult the per-key hourly bucket AFTER the
+  // secret_hash check passes. This ordering matters:
+  //
+  //   - `rate_limit_per_hour === 0` means "unlimited" — common for
+  //     internal / admin keys. Skip the bucket lookup entirely so a
+  //     hot internal path doesn't pay the Map traversal cost.
+  //   - Unknown / invalid keys never reach this branch (rowCount === 0
+  //     short-circuits above), so we never burn a bucket slot on a
+  //     forged token.
+  //   - The bucket key includes the numeric `api_keys.id` — NOT the
+  //     key_prefix — so revoking + re-issuing a key with the same
+  //     prefix (we don't do that today, but could) starts a fresh
+  //     bucket and doesn't inherit the old key's hot-usage signal.
+  if (rateLimitPerHour > 0) {
+    const limit = checkRateLimit(`apikey:${row.id}`, {
+      windowMs: 60 * 60 * 1000,
+      maxRequests: rateLimitPerHour,
+    });
+    if (!limit.allowed) {
+      throw new RateLimitError(limit.retryAfterSeconds);
+    }
+  }
 
   if (row.owner_org_id) {
     // Org-scoped automation acts only as the org itself. We deliberately do
