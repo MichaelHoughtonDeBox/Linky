@@ -7,7 +7,9 @@ import {
   AuthRequiredError,
   ForbiddenError,
   requireAuthSubject,
+  requireCanAdminLinky,
   requireCanEditLinky,
+  roleOfSubject,
 } from "@/lib/server/auth";
 import {
   getLinkyRecordBySlug,
@@ -97,13 +99,19 @@ export async function PATCH(
     }
 
     // Owner check lives at the repository boundary so any future caller
-    // (CLI, SDK, dashboard) hits the same guard.
-    requireCanEditLinky(subject, {
-      ownerUserId:
-        existing.owner.type === "user" ? existing.owner.userId : null,
-      ownerOrgId:
-        existing.owner.type === "org" ? existing.owner.orgId : null,
-    });
+    // (CLI, SDK, dashboard) hits the same guard. Role is derived from the
+    // subject's active Clerk org role (Sprint 2.7 Chunk C); editors and
+    // admins can patch, viewers cannot.
+    requireCanEditLinky(
+      subject,
+      {
+        ownerUserId:
+          existing.owner.type === "user" ? existing.owner.userId : null,
+        ownerOrgId:
+          existing.owner.type === "org" ? existing.owner.orgId : null,
+      },
+      roleOfSubject(subject),
+    );
 
     let rawPayload: unknown;
     try {
@@ -170,12 +178,21 @@ export async function DELETE(
       );
     }
 
-    requireCanEditLinky(subject, {
-      ownerUserId:
-        existing.owner.type === "user" ? existing.owner.userId : null,
-      ownerOrgId:
-        existing.owner.type === "org" ? existing.owner.orgId : null,
-    });
+    // Sprint 2.7 Chunk C tightening: DELETE is now admin-only on org-owned
+    // Linkies. Editors cannot nuke a team bundle unilaterally — the
+    // supported path is "promote the caller to org:admin in Clerk" or
+    // "ask an admin." Deletes are soft and show up in version history,
+    // so the tightening does not block real recovery needs.
+    requireCanAdminLinky(
+      subject,
+      {
+        ownerUserId:
+          existing.owner.type === "user" ? existing.owner.userId : null,
+        ownerOrgId:
+          existing.owner.type === "org" ? existing.owner.orgId : null,
+      },
+      roleOfSubject(subject),
+    );
 
     await softDeleteLinkyRecord(slug);
     return Response.json({ ok: true });

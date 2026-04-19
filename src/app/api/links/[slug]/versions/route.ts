@@ -6,7 +6,8 @@ import {
   AuthRequiredError,
   ForbiddenError,
   requireAuthSubject,
-  requireCanEditLinky,
+  requireCanViewLinky,
+  roleOfSubject,
 } from "@/lib/server/auth";
 import {
   getLinkyRecordBySlug,
@@ -58,9 +59,12 @@ function toVersionDto(version: LinkyVersionRecord) {
 // ---------------------------------------------------------------------------
 // GET /api/links/:slug/versions
 //
-// Append-only edit history. Viewable only by users who can edit the Linky
-// (owner, or org member for org-owned Linkies). Anonymous Linkies have no
-// versions — the endpoint 403s before attempting a DB read.
+// Append-only edit history. Sprint 2.7 Chunk C: gated on `canView`, so
+// every derived role (viewer / editor / admin) can see history. Version
+// history is a read surface — hiding it from viewers would make "who
+// changed the tabs?" a privileged question unnecessarily. Anonymous
+// Linkies have no versions — the endpoint 403s before attempting a DB
+// read.
 // ---------------------------------------------------------------------------
 
 export async function GET(
@@ -79,12 +83,16 @@ export async function GET(
       );
     }
 
-    requireCanEditLinky(subject, {
-      ownerUserId:
-        existing.owner.type === "user" ? existing.owner.userId : null,
-      ownerOrgId:
-        existing.owner.type === "org" ? existing.owner.orgId : null,
-    });
+    requireCanViewLinky(
+      subject,
+      {
+        ownerUserId:
+          existing.owner.type === "user" ? existing.owner.userId : null,
+        ownerOrgId:
+          existing.owner.type === "org" ? existing.owner.orgId : null,
+      },
+      roleOfSubject(subject),
+    );
 
     const versions = await listLinkyVersions(slug);
 
