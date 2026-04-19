@@ -8,9 +8,15 @@ export default defineConfig({
   test: {
     environment: "node",
     // Unit tests live next to the code they cover. `src/**` is the Next.js
-    // app; `sdk/**` is the external JS SDK published to npm. Both trees
-    // run through the same vitest config.
-    include: ["src/**/*.test.ts", "sdk/**/*.test.js"],
+    // app; `sdk/**` is the external JS SDK published to npm; `cli/**` is
+    // the Node CLI (including the `.mjs` stdio MCP bridge from Sprint 2.8
+    // Chunk B). All three trees run through the same vitest config.
+    include: [
+      "src/**/*.test.ts",
+      "sdk/**/*.test.js",
+      "cli/**/*.test.js",
+      "cli/**/*.test.mjs",
+    ],
     // Don't try to load `server-only` under test — it throws by design in
     // any non-server context. Stubbing keeps the tested modules' intent
     // visible (they should only be imported server-side) while letting
