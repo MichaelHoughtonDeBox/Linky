@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
+import { HeroTerminal } from "@/components/site/hero-terminal";
 import { LiveLinkyDemo } from "@/components/site/live-linky-demo";
 import { SiteHeader } from "@/components/site/site-header";
 import { WorksWithStrip } from "@/components/site/works-with-strip";
@@ -89,7 +90,24 @@ export default async function Home() {
       <main className="site-shell w-full max-w-6xl p-5 sm:p-6 lg:p-7">
         <SiteHeader currentPath="/" />
 
-        <section className="site-hero">
+        {/*
+          Hero lockup. The outer <section> is a bare grid — NO `.site-hero`
+          class — so nothing caps its width. The class's `max-width: 46rem`
+          in globals.css was winning against `lg:max-w-none` at equal
+          specificity, capping the section at 736px and wrapping the H1
+          onto four lines. Instead:
+            - Section owns vertical rhythm via `mb-[clamp(2.5rem,6vw,4.5rem)]`
+              (matches what `.site-hero` provided globally).
+            - Inner copy column re-applies the 46rem cap as a Tailwind
+              arbitrary (`max-w-[46rem]`) purely as a reading-measure
+              constraint for the prose — no margin/cascade side effects.
+            - Terminal column is a fixed 28rem track, so the square's
+              visual weight rhymes with the H1.
+          Below lg the grid collapses to a single column; H1 + lead + CTAs
+          still land first on mobile.
+        */}
+        <section className="mb-[clamp(2.5rem,6vw,4.5rem)] grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-14">
+          <div className="site-hero-copy min-w-0 max-w-[46rem]">
           {/*
             Kicker now surfaces the three strongest, plain-English anchors
             (OSS, agent-first, MIT) instead of the abstract
@@ -211,6 +229,21 @@ export default async function Home() {
           <p className="terminal-muted mt-3 text-xs sm:text-sm">
             No signup, no credit card. MIT-licensed — self-host anytime.
           </p>
+          </div>
+
+          {/*
+            Hero animation column. `HeroTerminal` owns its own 1:1
+            aspect-ratio box and scanline scrim; the wrapper just caps
+            the mobile width so the square doesn't swallow a phone
+            screen. On desktop the parent grid track (~28rem) drives
+            the size so the terminal's visual weight matches the H1.
+            Sticky positioning was dropped — in a single-fold hero it
+            pinned the terminal high and broke vertical alignment
+            against the copy.
+          */}
+          <div className="site-hero-art mx-auto w-full max-w-xs sm:max-w-sm lg:mx-0 lg:max-w-none">
+            <HeroTerminal />
+          </div>
         </section>
 
         <LiveLinkyDemo />

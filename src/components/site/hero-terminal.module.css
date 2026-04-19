@@ -1,0 +1,451 @@
+/*
+  Terminal-paste hero animation — CSS module.
+
+  Timing (10s loop):
+    0.25–1.05s  type command
+    1.20s       → reading 8 URLs
+    1.55–3.16s  8 URL lines stream in (~0.23s apart)
+    3.70s       ✓ bundled line
+    4.10s       result row appears
+    4.35–5.10s  short URL types into box
+    5.00s       box highlight fills
+    5.50s       SHARE pointer fades in
+    5.10–9.30s  HOLD
+    9.30s       fade-out, loop restart
+
+  Design system compliance:
+    - Durations scoped by animation name prefix `ht-` (hero-terminal)
+    - Colors reference global tokens from src/app/globals.css when present,
+      with literal hex fallbacks for component-level rendering outside the
+      design system.
+    - No transitions on more than one property per selector.
+    - `prefers-reduced-motion` disables the loop; final frame shown instead.
+*/
+
+.hero {
+  /*
+    Reference Linky's actual design tokens (--foreground / --background /
+    --panel-border / --muted / --font-linky-mono from globals.css), with
+    literal hex fallbacks so the component still renders standalone in
+    Storybook-style previews where the root tokens aren't mounted.
+    --code-fill has no project-level alias yet, so the literal #f4f4f4
+    is the single source for the highlight tint on the result box.
+  */
+  --ink: var(--foreground, #111111);
+  --paper: var(--background, #ffffff);
+  --mute: var(--muted, #666666);
+  --line: var(--panel-border, #d9d9d9);
+  --code-fill: #f4f4f4;
+  --font-mono: var(--font-linky-mono, "IBM Plex Mono", Menlo, Monaco, monospace);
+  --track-kicker: 0.16em;
+  --track-chip: 0.05em;
+
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  color: var(--ink);
+}
+
+/* Scanline scrim */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgba(17, 17, 17, 0.024) 3px,
+    rgba(17, 17, 17, 0.024) 4px
+  );
+  z-index: 5;
+}
+
+/* Corner crosshairs */
+.crosshair {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  z-index: 4;
+}
+.crosshair::before,
+.crosshair::after {
+  content: "";
+  position: absolute;
+  background: var(--ink);
+}
+.crosshair::before {
+  left: 0;
+  top: 4.5px;
+  width: 10px;
+  height: 1px;
+}
+.crosshair::after {
+  left: 4.5px;
+  top: 0;
+  width: 1px;
+  height: 10px;
+}
+.tl { top: 12px; left: 12px; }
+.tr { top: 12px; right: 12px; }
+.bl { bottom: 12px; left: 12px; }
+.br { bottom: 12px; right: 12px; }
+
+/* Progress bar */
+.progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--ink);
+  z-index: 7;
+  width: 0;
+  animation: ht-progress 10s linear infinite;
+}
+@keyframes ht-progress {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+/* Footline */
+.footline {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: var(--track-chip);
+  color: var(--mute);
+  z-index: 6;
+  white-space: nowrap;
+  gap: 12px;
+}
+.footline span { white-space: nowrap; }
+
+/* Terminal body */
+.term {
+  position: absolute;
+  top: 42px;
+  left: 32px;
+  right: 32px;
+  bottom: 42px;
+  z-index: 3;
+  font-family: var(--font-mono);
+  line-height: 1.75;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+
+.termHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: var(--track-kicker);
+  text-transform: uppercase;
+  color: var(--mute);
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+  white-space: nowrap;
+  gap: 12px;
+}
+.termHeader > span { white-space: nowrap; }
+.title {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+.headerDot {
+  width: 8px;
+  height: 8px;
+  background: var(--ink);
+  display: inline-block;
+  animation: ht-pulse 10s linear infinite;
+}
+@keyframes ht-pulse {
+  0%, 42%          { opacity: 1; }
+  42.01%, 58%      { opacity: 0.3; }
+  58.01%, 100%     { opacity: 1; }
+}
+
+.lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+}
+
+.line {
+  white-space: nowrap;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+.prompt { color: var(--mute); margin-right: 6px; font-weight: 500; }
+.arrow  { color: var(--mute); margin-right: 6px; }
+.ok     { color: var(--ink);  margin-right: 6px; font-weight: 500; }
+.val    { color: var(--ink); }
+.hint   { color: var(--mute); }
+
+/* Typewriter reveal via max-width */
+.typed {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+
+/* Blinking caret */
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: var(--ink);
+  vertical-align: -2px;
+  margin-left: 2px;
+  animation: ht-blink 0.7s step-end infinite;
+}
+@keyframes ht-blink {
+  0%, 50%          { opacity: 1; }
+  50.01%, 100%     { opacity: 0; }
+}
+
+/*
+  Per-line orchestration — infinite 10s loop.
+
+  Every content animation is a single 10-second keyframe cycle set to
+  `infinite`. The percentages encode the original wall-clock beats:
+    2.5%–10.5%  command types
+    12%–14.2%   → reading 8 URLs fades in
+    15.5%–33.8% 8 URL lines stream in (each ~2.3% apart)
+    37%–39.8%   bundle line fades in
+    41%–44%     result row fades in
+    43.5%–51%   short URL types into box
+    50%–53.2%   box highlight fills
+    55%–58%     SHARE pointer fades in
+    93%–96%     everything fades out
+    96%–100%    rest / reset for the next iteration
+  Keyframe-level `animation-timing-function` lets us retain the
+  typewriter `steps()` feel inside the typing segments while the rest
+  of the cycle is linear. The progress-bar + header-dot pulse +
+  caret-blink animations above were already infinite and are
+  untouched.
+*/
+
+/* Command line typing + reset */
+@keyframes ht-cmd {
+  0%, 2.5% {
+    max-width: 0;
+    opacity: 1;
+    animation-timing-function: steps(24, end);
+  }
+  10.5% {
+    max-width: 24ch;
+    opacity: 1;
+    animation-timing-function: linear;
+  }
+  93% {
+    max-width: 24ch;
+    opacity: 1;
+  }
+  96% {
+    max-width: 24ch;
+    opacity: 0;
+  }
+  100% {
+    max-width: 0;
+    opacity: 0;
+  }
+}
+.lCmd .typed {
+  animation: ht-cmd 10s linear infinite;
+}
+
+/* Default hidden state for every streamed line */
+.lRead,
+.lU1, .lU2, .lU3, .lU4, .lU5, .lU6, .lU7, .lU8,
+.lBundle, .lResult { opacity: 0; }
+
+/*
+  Per-line fade-in / hold / fade-out. All 11 lines share the same
+  pattern: hidden until their fade-in window, fully visible through
+  93%, fade-out over 3%, stay hidden until the cycle restarts at 0%.
+  Separate keyframes (rather than a shared keyframe + negative delay)
+  are required because every line has a *different* fade-in start
+  but the *same* fade-out moment (93%) — delays only stagger the
+  first iteration, so the simultaneous fade-out would drift apart.
+*/
+@keyframes ht-lRead {
+  0%, 12%    { opacity: 0; transform: translateY(3px); }
+  14.2%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU1 {
+  0%, 15.5%  { opacity: 0; transform: translateY(3px); }
+  17.7%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU2 {
+  0%, 17.8%  { opacity: 0; transform: translateY(3px); }
+  20.0%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU3 {
+  0%, 20.1%  { opacity: 0; transform: translateY(3px); }
+  22.3%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU4 {
+  0%, 22.4%  { opacity: 0; transform: translateY(3px); }
+  24.6%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU5 {
+  0%, 24.7%  { opacity: 0; transform: translateY(3px); }
+  26.9%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU6 {
+  0%, 27.0%  { opacity: 0; transform: translateY(3px); }
+  29.2%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU7 {
+  0%, 29.3%  { opacity: 0; transform: translateY(3px); }
+  31.5%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lU8 {
+  0%, 31.6%  { opacity: 0; transform: translateY(3px); }
+  33.8%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lBundle {
+  0%, 37%    { opacity: 0; transform: translateY(3px); }
+  39.8%, 93% { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+@keyframes ht-lResult {
+  0%, 41%    { opacity: 0; transform: translateY(3px); }
+  44%, 93%   { opacity: 1; transform: translateY(0); }
+  96%, 100%  { opacity: 0; transform: translateY(3px); }
+}
+
+.lRead   { animation: ht-lRead   10s linear infinite; }
+.lU1     { animation: ht-lU1     10s linear infinite; }
+.lU2     { animation: ht-lU2     10s linear infinite; }
+.lU3     { animation: ht-lU3     10s linear infinite; }
+.lU4     { animation: ht-lU4     10s linear infinite; }
+.lU5     { animation: ht-lU5     10s linear infinite; }
+.lU6     { animation: ht-lU6     10s linear infinite; }
+.lU7     { animation: ht-lU7     10s linear infinite; }
+.lU8     { animation: ht-lU8     10s linear infinite; }
+.lBundle { animation: ht-lBundle 10s linear infinite; }
+.lResult { animation: ht-lResult 10s linear infinite; }
+
+/* Result URL typewriter — steps() only inside the 43.5%–51% segment */
+@keyframes ht-result-typed {
+  0%, 43.5% {
+    max-width: 0;
+    animation-timing-function: steps(22, end);
+  }
+  51% {
+    max-width: 28ch;
+    animation-timing-function: linear;
+  }
+  93% {
+    max-width: 28ch;
+  }
+  100% {
+    max-width: 0;
+  }
+}
+.lResult .typed {
+  animation: ht-result-typed 10s linear infinite;
+}
+
+/* Result box — border + fill snap on at 50%, reset at 96% */
+.resultBox {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border: 1px solid transparent;
+  font-weight: 500;
+  position: relative;
+  animation: ht-box 10s linear infinite;
+}
+@keyframes ht-box {
+  0%, 50% {
+    border-color: transparent;
+    background: transparent;
+    animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  53.2%, 93% {
+    border-color: var(--ink);
+    background: var(--code-fill);
+    animation-timing-function: linear;
+  }
+  96%, 100% {
+    border-color: transparent;
+    background: transparent;
+  }
+}
+
+/* SHARE pointer */
+.pointer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 10px;
+  font-size: 11px;
+  color: var(--mute);
+  letter-spacing: var(--track-chip);
+  text-transform: uppercase;
+  opacity: 0;
+  animation: ht-pointer 10s linear infinite;
+}
+@keyframes ht-pointer {
+  0%, 55%   { opacity: 0; }
+  58%, 93%  { opacity: 1; }
+  96%, 100% { opacity: 0; }
+}
+
+.tick {
+  display: inline-block;
+  width: 14px;
+  height: 1px;
+  background: var(--mute);
+}
+
+/* Reduced motion — freeze on final frame */
+@media (prefers-reduced-motion: reduce) {
+  .progress,
+  .caret,
+  .headerDot { animation: none !important; }
+
+  .hero * { animation: none !important; }
+
+  .typed { max-width: 40ch !important; }
+
+  .lRead, .lU1, .lU2, .lU3, .lU4, .lU5, .lU6, .lU7, .lU8,
+  .lBundle, .lResult { opacity: 1 !important; }
+
+  .resultBox {
+    border-color: var(--ink);
+    background: var(--code-fill);
+  }
+
+  .pointer { opacity: 1; }
+}
