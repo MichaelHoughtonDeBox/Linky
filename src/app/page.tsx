@@ -16,6 +16,7 @@ const USE_CASES = [
   "Run incident-response checklists from one shareable URL — no hunting for tabs.",
   "Ship a single team standup Linky — each teammate opens their own queue, drafts, and inbox from the same URL.",
   "Route signed-in partners to partner-scoped URLs while staff open internal runbooks from the same Linky.",
+  "See which personalized rule your audience actually matched — owner-side insights with zero viewer tracking.",
 ];
 
 // Reordered so the first three FAQs answer the questions a brand-new reader
@@ -56,6 +57,21 @@ const FAQ_ITEMS = [
     question: "Can my agent attach a policy when creating a Linky?",
     answer:
       "Yes. The create endpoint accepts an optional resolutionPolicy in the same request, and the CLI exposes linky create ... --policy file.json (use --policy - to pipe from stdin). The Linky is locked down from the first click — no window where an unrestricted version is live. Anonymous launch bundles are immutable until claimed, so if your agent attaches a policy without signing in, pass email alongside it so the claim URL lands with the eventual human owner.",
+  },
+  {
+    question: "Can a team share Linky launch bundles?",
+    answer:
+      "Yes. Switch to your org workspace and every Linky you create is team-owned. Teammates are mapped to one of three roles — admin, editor, viewer — derived from their Clerk org role. Admins delete and manage keys, editors edit, viewers read. Role changes happen in Clerk; Linky mirrors them through webhooks. Full role model at /docs/access-control.",
+  },
+  {
+    question: "How do I see whether my personalized Linky is working?",
+    answer:
+      "Open any launch bundle in the dashboard and click Insights. You see views, unique viewer-days, Open All clicks, and the per-rule breakdown — did the engineering rule match, or did everyone fall through to the public bundle? No destination-tab tracking, no viewer cookies. Owner questions only: did my audience arrive, and did the right rule match?",
+  },
+  {
+    question: "Is it safe to put a Linky API key in an LLM's context?",
+    answer:
+      "Pick a read-only scope at mint time. Linky keys carry one of three scopes — links:read, links:write, or keys:admin — and scope is locked at mint. A read-only key can list and view bundles, read insights, and nothing else. If the key leaks from an agent transcript, the blast radius is exactly what you chose up front.",
   },
 ];
 
