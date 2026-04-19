@@ -91,18 +91,23 @@ export default async function Home() {
         <SiteHeader currentPath="/" />
 
         {/*
-          Hero lockup is a two-column grid on lg+ so the copy sits next to
-          the 1:1 HeroTerminal animation (bundled session → short link).
-          Below lg, the terminal stacks under the copy so the H1 + lead
-          still land first on mobile. `items-center` centers the terminal
-          vertically against the full copy column (kicker → microcopy)
-          — with `items-start` the terminal hugged the kicker's baseline
-          and left a dead zone next to the CTAs. The grid track for the
-          terminal is sized to ~28rem so the square visually rhymes with
-          the H1's weight instead of reading as a thumbnail.
+          Hero lockup. The outer <section> is a bare grid — NO `.site-hero`
+          class — so nothing caps its width. The class's `max-width: 46rem`
+          in globals.css was winning against `lg:max-w-none` at equal
+          specificity, capping the section at 736px and wrapping the H1
+          onto four lines. Instead:
+            - Section owns vertical rhythm via `mb-[clamp(2.5rem,6vw,4.5rem)]`
+              (matches what `.site-hero` provided globally).
+            - Inner copy column re-applies the 46rem cap as a Tailwind
+              arbitrary (`max-w-[46rem]`) purely as a reading-measure
+              constraint for the prose — no margin/cascade side effects.
+            - Terminal column is a fixed 28rem track, so the square's
+              visual weight rhymes with the H1.
+          Below lg the grid collapses to a single column; H1 + lead + CTAs
+          still land first on mobile.
         */}
-        <section className="site-hero grid grid-cols-1 items-center gap-10 lg:max-w-none lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-14">
-          <div className="site-hero-copy min-w-0">
+        <section className="mb-[clamp(2.5rem,6vw,4.5rem)] grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-14">
+          <div className="site-hero-copy min-w-0 max-w-[46rem]">
           {/*
             Kicker now surfaces the three strongest, plain-English anchors
             (OSS, agent-first, MIT) instead of the abstract
